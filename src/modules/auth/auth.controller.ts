@@ -69,29 +69,17 @@ export class AuthController {
   ) {
     try {
       const name = data.name;
-      const first_name = data.first_name;
-      const last_name = data.last_name;
       const email = data.email;
       const password = data.password;
       const type = data.type;
+      const latitude = data.latitude;
+      const longitude = data.longitude;
       const avatarFile = avatar;
 
-      console.log('hello', avatarFile);
+      // console.log('hello', avatarFile);
 
       if (!name) {
         throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
-      }
-      if (!first_name) {
-        throw new HttpException(
-          'First name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-      if (!last_name) {
-        throw new HttpException(
-          'Last name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
       }
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
@@ -102,15 +90,21 @@ export class AuthController {
           HttpStatus.UNAUTHORIZED,
         );
       }
+      if (!latitude || !longitude) {
+        throw new HttpException(
+          'Location (latitude and longitude) is required',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
 
       const response = await this.authService.register({
         name: name,
-        first_name: first_name,
-        last_name: last_name,
         email: email,
         password: password,
         type: type,
         avatar: avatarFile,
+        latitude: latitude,
+        longitude: longitude,
       });
 
       return response;

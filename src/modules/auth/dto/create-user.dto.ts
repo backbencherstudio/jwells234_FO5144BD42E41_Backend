@@ -8,14 +8,6 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   @ApiProperty()
-  first_name?: string;
-
-  @IsNotEmpty()
-  @ApiProperty()
-  last_name?: string;
-
-  @IsNotEmpty()
-  @ApiProperty()
   email?: string;
 
   @IsNotEmpty()
@@ -28,6 +20,14 @@ export class CreateUserDto {
     example: 'user',
   })
   type?: string;
+
+  @IsNotEmpty()
+  @ApiProperty()
+  latitude: number;
+
+  @IsNotEmpty()
+  @ApiProperty()
+  longitude: number;
 
   // avatar will be set in controller after file upload
   @IsOptional()
