@@ -199,6 +199,9 @@ export class UserRepository {
     role_id = null,
     type = 'user',
     avatar,
+    latitude,
+    longitude,
+    country,
   }: {
     name?: string;
     first_name?: string;
@@ -209,6 +212,9 @@ export class UserRepository {
     role_id?: string;
     type?: string;
     avatar?: string;
+    latitude?: number;
+    longitude?: number;
+    country?: string;
   }) {
     try {
       const data = {};
@@ -223,6 +229,15 @@ export class UserRepository {
       }
       if (phone_number) {
         data['phone_number'] = phone_number;
+      }
+      if (latitude) {
+        data['latitude'] = latitude;
+      }
+      if (longitude) {
+        data['longitude'] = longitude;
+      }
+      if (country) {
+        data['country'] = country;
       }
       if (email) {
         // Check if email already exist
@@ -300,54 +315,28 @@ export class UserRepository {
    */
   static async updateUser(
     user_id: string,
-    {
-      name,
-      email,
-      password,
-      role_id = null,
-      type = 'user',
-    }: {
-      name?: string;
-      email?: string;
-      password?: string;
-      role_id?: string;
-      type?: string;
-    },
+    data: any,
   ) {
     try {
-      const data = {};
-      if (name) {
-        data['name'] = name;
-      }
-      if (email) {
+      if (data.email) {
         // Check if email already exist
         const userEmailExist = await UserRepository.exist({
           field: 'email',
-          value: String(email),
+          value: String(data.email),
         });
 
-        if (userEmailExist) {
+        if (userEmailExist && userEmailExist.id !== user_id) {
           return {
             success: false,
             message: 'Email already exist',
           };
         }
-        data['email'] = email;
       }
-      if (password) {
-        data['password'] = await bcrypt.hash(
-          password,
+      if (data.password) {
+        data.password = await bcrypt.hash(
+          data.password,
           appConfig().security.salt,
         );
-      }
-
-      if (ArrayHelper.inArray(type, Object.values(Role))) {
-        data['type'] = type;
-      } else {
-        return {
-          success: false,
-          message: 'Invalid user type',
-        };
       }
 
       const existUser = await prisma.user.findFirst({
@@ -367,19 +356,18 @@ export class UserRepository {
         where: {
           id: user_id,
         },
-        data: {
-          ...data,
-        },
+        data: data,
       });
 
       if (user) {
-        if (role_id) {
-          // attach role
-          await this.attachRole({
-            user_id: user.id,
-            role_id: role_id,
-          });
-        }
+      
+        // if (role_id) {
+        //   // attach role
+        //   await this.attachRole({
+        //     user_id: user.id,
+        //     role_id: role_id,
+        //   });
+        // }
 
         return {
           success: true,

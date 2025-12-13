@@ -16,6 +16,7 @@ import { DateHelper } from '../../common/helper/date.helper';
 import { StripePayment } from '../../common/lib/Payment/stripe/StripePayment';
 import { StringHelper } from '../../common/helper/string.helper';
 import { CreateUserDto } from './dto/create-user.dto';
+import { LocationService } from '../../common/lib/LocationService';
 
 @Injectable()
 export class AuthService {
@@ -26,24 +27,37 @@ export class AuthService {
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
+
+
+
+
   async register({
     name,
-    first_name,
-    last_name,
     email,
     password,
     type,
     avatar,
+    latitude,
+    longitude,
   }: {
     name: string;
-    first_name: string;
-    last_name: string;
     email: string;
     password: string;
     type?: string;
     avatar?: Express.Multer.File;
+    latitude: number;
+    longitude: number;
   }) {
     try {
+      // Check location
+      const isAllowed = await LocationService.isLocationInBangladesh(latitude, longitude);
+      if (!isAllowed) {
+        return {
+          statusCode: 403,
+          message: 'Access restricted to Bangladesh only.',
+        };
+      }
+
       // Check if email already exist
       const userEmailExist = await UserRepository.exist({
         field: 'email',
@@ -85,12 +99,13 @@ export class AuthService {
 
       const user = await UserRepository.createUser({
         name: name,
-        first_name: first_name,
-        last_name: last_name,
         email: email,
         password: password,
         type: type,
         avatar: mediaUrl,
+        latitude: latitude,
+        longitude: longitude,
+        country: 'Bangladesh',
       });
 
       if (user == null && user.success == false) {
@@ -230,12 +245,7 @@ export class AuthService {
       if (updateUserDto.name) {
         data.name = updateUserDto.name;
       }
-      if (updateUserDto.first_name) {
-        data.first_name = updateUserDto.first_name;
-      }
-      if (updateUserDto.last_name) {
-        data.last_name = updateUserDto.last_name;
-      }
+
       if (updateUserDto.phone_number) {
         data.phone_number = updateUserDto.phone_number;
       }
@@ -262,6 +272,22 @@ export class AuthService {
       }
       if (updateUserDto.date_of_birth) {
         data.date_of_birth = DateHelper.format(updateUserDto.date_of_birth);
+      }
+
+      if (updateUserDto.latitude && updateUserDto.longitude) {
+        const isAllowed = await LocationService.isLocationInBangladesh(
+          updateUserDto.latitude,
+          updateUserDto.longitude,
+        );
+        if (!isAllowed) {
+          return {
+            success: false,
+            message: 'Access restricted to Bangladesh only.',
+          };
+        }
+        data.latitude = updateUserDto.latitude;
+        data.longitude = updateUserDto.longitude;
+        data.country = 'Bangladesh';
       }
 
       let mediaUrl: string | undefined;
