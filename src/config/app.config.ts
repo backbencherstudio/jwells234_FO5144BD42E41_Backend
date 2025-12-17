@@ -60,6 +60,8 @@ export default () => ({
     user: process.env.MAIL_USERNAME,
     password: process.env.MAIL_PASSWORD,
     from: process.env.MAIL_FROM_ADDRESS,
+    supportEmail: process.env.ADMIN_EMAIL,
+    adminEmail: process.env.ADMIN_EMAIL,
   },
 
   auth: {

@@ -78,4 +78,31 @@ export class MailService {
       console.log(error);
     }
   }
+
+  async sendSupportRequest(params: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }) {
+    try {
+      const from = `${params.name} <${params.email}>`;
+      const to = appConfig().mail.supportEmail || appConfig().mail.from;
+
+      // add to queue
+      await this.queue.add('sendSupportRequest', {
+        to: to,
+        from: from,
+        subject: `Support Request: ${params.subject}`,
+        template: 'support-request.ejs',
+        context: {
+          name: params.name,
+          email: params.email,
+          message: params.message,
+        },
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }

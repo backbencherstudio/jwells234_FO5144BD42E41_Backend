@@ -27,13 +27,10 @@ export class AuthService {
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
-
-
-
-
   async register({
     name,
     email,
+    username,
     password,
     type,
     avatar,
@@ -42,6 +39,7 @@ export class AuthService {
   }: {
     name: string;
     email: string;
+    username: string;
     password: string;
     type?: string;
     avatar?: Express.Multer.File;
@@ -50,13 +48,13 @@ export class AuthService {
   }) {
     try {
       // Check location
-      const isAllowed = await LocationService.isLocationInBangladesh(latitude, longitude);
-      if (!isAllowed) {
-        return {
-          statusCode: 403,
-          message: 'Access restricted to Bangladesh only.',
-        };
-      }
+      // const isAllowed = await LocationService.isLocationInBangladesh(latitude, longitude);
+      // if (!isAllowed) {
+      //   return {
+      //     statusCode: 403,
+      //     message: 'Access restricted to Bangladesh only.',
+      //   };
+      // }
 
       // Check if email already exist
       const userEmailExist = await UserRepository.exist({
@@ -100,6 +98,7 @@ export class AuthService {
       const user = await UserRepository.createUser({
         name: name,
         email: email,
+        username: username,
         password: password,
         type: type,
         avatar: mediaUrl,
@@ -134,23 +133,23 @@ export class AuthService {
       }
 
       // ----------------------------------------------------
-      // // create otp code
-      // const token = await UcodeRepository.createToken({
-      //   userId: user.data.id,
-      //   isOtp: true,
-      // });
+      // create otp code
+      const token = await UcodeRepository.createToken({
+        userId: user.data.id,
+        isOtp: true,
+      });
 
-      // // send otp code to email
-      // await this.mailService.sendOtpCodeToEmail({
-      //   email: email,
-      //   name: name,
-      //   otp: token,
-      // });
+      // send otp code to email
+      await this.mailService.sendOtpCodeToEmail({
+        email: email,
+        name: name,
+        otp: token,
+      });
 
-      // return {
-      //   success: true,
-      //   message: 'We have sent an OTP code to your email',
-      // };
+      return {
+        success: true,
+        message: 'We have sent an OTP code to your email',
+      };
 
       // ----------------------------------------------------
 
@@ -199,7 +198,9 @@ export class AuthService {
           id: true,
           name: true,
           email: true,
+          username: true,
           avatar: true,
+          about: true,
           address: true,
           phone_number: true,
           type: true,
@@ -244,6 +245,14 @@ export class AuthService {
       const data: any = {};
       if (updateUserDto.name) {
         data.name = updateUserDto.name;
+      }
+
+      if (updateUserDto.username) {
+        data.username = updateUserDto.username;
+      }
+
+      if (updateUserDto.about) {
+        data.about = updateUserDto.about;
       }
 
       if (updateUserDto.phone_number) {
@@ -1058,4 +1067,142 @@ export class AuthService {
     }
   }
   // --------- end 2FA ---------
+
+  async disableAccount(user_id: string) {
+    try {
+      if (!user_id) {
+        return {
+          success: false,
+          message: 'User ID is required',
+        };
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: user_id },
+        select: { id: true },
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      await this.prisma.user.update({
+        where: { id: user_id },
+        data: { status: 0 }, // 0: Inactive
+      });
+      return {
+        success: true,
+        message: 'User account disabled successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  async enableAccount(user_id: string) {
+    try {
+      if (!user_id) {
+        return {
+          success: false,
+          message: 'User ID is required',
+        };
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: user_id },
+        select: { id: true },
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      await this.prisma.user.update({
+        where: { id: user_id },
+        data: { status: 1 }, // 1: Active
+      });
+      return {
+        success: true,
+        message: 'User account enabled successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  async deleteAccount(user_id: string) {
+    try {
+      if (!user_id) {
+        return {
+          success: false,
+          message: 'User ID is required',
+        };
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: user_id },
+        select: { id: true },
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      // Soft delete
+      await this.prisma.user.update({
+        where: { id: user_id },
+        data: { deleted_at: new Date() },
+      });
+
+      return {
+        success: true,
+        message: 'User account deleted successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  async helpSupport(
+    name: string,
+    email: string,
+    subject: string,
+    message: string,
+  ) {
+    try {
+      await this.mailService.sendSupportRequest({
+        name,
+        email,
+        subject,
+        message,
+      });
+      return {
+        success: true,
+        message: 'Support request sent successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
 }

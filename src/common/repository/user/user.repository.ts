@@ -191,9 +191,8 @@ export class UserRepository {
    */
   static async createUser({
     name,
-    first_name,
-    last_name,
     email,
+    username,
     password,
     phone_number,
     role_id = null,
@@ -207,6 +206,7 @@ export class UserRepository {
     first_name?: string;
     last_name?: string;
     email: string;
+    username?: string;
     password: string;
     phone_number?: string;
     role_id?: string;
@@ -220,12 +220,6 @@ export class UserRepository {
       const data = {};
       if (name) {
         data['name'] = name;
-      }
-      if (first_name) {
-        data['first_name'] = first_name;
-      }
-      if (last_name) {
-        data['last_name'] = last_name;
       }
       if (phone_number) {
         data['phone_number'] = phone_number;
@@ -255,6 +249,47 @@ export class UserRepository {
 
         data['email'] = email;
       }
+
+      // Handle Username
+      if (username) {
+        const userNameExist = await UserRepository.exist({
+          field: 'username',
+          value: String(username),
+        });
+        if (userNameExist) {
+          return {
+            success: false,
+            message: 'Username already exist',
+          };
+        }
+        data['username'] = username;
+      } else {
+        // Generate username from email
+        let baseUsername = email.split('@')[0];
+        let candidateUsername = baseUsername;
+        let counter = 1;
+        while (await UserRepository.exist({ field: 'username', value: candidateUsername })) {
+          candidateUsername = `${baseUsername}${counter}`;
+          counter++;
+        }
+        data['username'] = candidateUsername;
+      }
+
+      if (username) {
+        // Check if username already exist
+        const userUsernameExist = await UserRepository.exist({
+          field: 'username',
+          value: String(username),
+        });
+        if (userUsernameExist) {
+          return {
+            success: false,
+            message: 'Username already exist',
+          };
+        }
+        data['username'] = username;
+      }
+
       if (password) {
         data['password'] = await bcrypt.hash(
           password,
@@ -313,10 +348,7 @@ export class UserRepository {
    * @param param0
    * @returns
    */
-  static async updateUser(
-    user_id: string,
-    data: any,
-  ) {
+  static async updateUser(user_id: string, data: any) {
     try {
       if (data.email) {
         // Check if email already exist
@@ -360,7 +392,6 @@ export class UserRepository {
       });
 
       if (user) {
-      
         // if (role_id) {
         //   // attach role
         //   await this.attachRole({

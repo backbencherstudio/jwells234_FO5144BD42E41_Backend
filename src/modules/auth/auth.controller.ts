@@ -29,6 +29,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import appConfig from '../../config/app.config';
 import { AuthGuard } from '@nestjs/passport';
 import { AppleAuthGuard } from './guards/apple-auth.guard';
+import { GetUser } from './decorators/get-user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -70,6 +71,7 @@ export class AuthController {
     try {
       const name = data.name;
       const email = data.email;
+      const username = data.username;
       const password = data.password;
       const type = data.type;
       const latitude = data.latitude;
@@ -83,6 +85,12 @@ export class AuthController {
       }
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+      }
+      if (!username) {
+        throw new HttpException(
+          'Username not provided',
+          HttpStatus.UNAUTHORIZED,
+        );
       }
       if (!password) {
         throw new HttpException(
@@ -100,6 +108,7 @@ export class AuthController {
       const response = await this.authService.register({
         name: name,
         email: email,
+        username: username,
         password: password,
         type: type,
         avatar: avatarFile,
@@ -536,4 +545,100 @@ export class AuthController {
     }
   }
   // --------- end 2FA ---------
+
+  @ApiOperation({ summary: 'Disable user account' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('disable-account')
+  async disableAccount(@GetUser() user) {
+    try {
+      const user_id = user.userId;
+      return await this.authService.disableAccount(user_id);
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'Enable user account' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('enable-account')
+  async enableAccount(@GetUser() user) {
+    try {
+      const user_id = user.userId;
+      return await this.authService.enableAccount(user_id);
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'Delete account' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('delete-account')
+  async deleteAccount(@GetUser() user) {
+    try {
+      const user_id = user.userId;
+      return await this.authService.deleteAccount(user_id);
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'Halp support' })
+  @Post('help-support')
+  async helpSupport(
+    @GetUser() user,
+    @Body()
+    data: {
+      name: string;
+      email: string;
+      subject: string;
+      message: string;
+    },
+  ) {
+    try {
+      const name = user.name;
+      const email = user.email;
+      
+      const subject = data.subject;
+      const message = data.message;
+
+      if (!name) {
+        throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
+      }
+      if (!email) {
+        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+      }
+      if (!message) {
+        throw new HttpException(
+          'Message not provided',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await this.authService.helpSupport(
+        name,
+        email,
+        subject,
+        message,
+      );
+
+      return response;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
 }

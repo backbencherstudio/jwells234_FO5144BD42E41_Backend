@@ -21,6 +21,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { ShoutModule } from './modules/shout/shout.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
     ChatModule,
     PaymentModule,
     SubscriptionModule,
+    ShoutModule,
   ],
   controllers: [AppController],
   providers: [
