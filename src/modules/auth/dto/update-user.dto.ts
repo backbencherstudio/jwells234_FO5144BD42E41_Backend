@@ -73,5 +73,10 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   })
   avatar?: string;
 
-  
+  @IsOptional()
+  @ApiProperty({
+    description: 'About user',
+    example: 'This is a sample about me section.',
+  })
+  about?: string;
 }

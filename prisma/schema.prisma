@@ -31,8 +31,6 @@ model Account {
   @@map("accounts")
 }
 
-
-
 model User {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
@@ -55,6 +53,7 @@ model User {
   password   String? @db.VarChar(255)
   domain     String? @unique
   avatar     String?
+  about      String? @db.Text
 
   phone_number  String?
   country       String?
@@ -95,6 +94,12 @@ model User {
   paymentMethods       PaymentMethod[]
   subscription         Subscription?        @relation(fields: [subscriptionId], references: [id])
   subscriptionId       String?
+
+  // Shout relations
+  shouts         Shout[]
+  shout_likes    ShoutLike[]
+  shout_comments ShoutComment[]
+  shoutReports   ShoutReport[]
 
   @@map("users")
 }
@@ -519,6 +524,111 @@ model UserSetting {
 
   @@map("user_settings")
 }
+
+// ---------Start Shout (Social) schema---------
+
+model Shout {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  content  String? @db.Text
+  category String? // Idea, Observation, Thought, Gratitude, Concern, Gossip
+
+  // Location
+  location  String?
+  latitude  Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+
+  is_anonymous Boolean @default(false)
+
+  // User relation
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // Media
+  medias ShoutMedia[]
+
+  // Interactions
+  likes    ShoutLike[]
+  comments ShoutComment[]
+
+  // Sharing
+  original_shout_id String?
+  original_shout    Shout?        @relation("ShoutShares", fields: [original_shout_id], references: [id])
+  shares            Shout[]       @relation("ShoutShares")
+  shoutReports      ShoutReport[]
+
+  @@map("shouts")
+}
+
+model ShoutMedia {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+
+  type     String // IMAGE, AUDIO
+  url      String
+  duration Int? // For audio in seconds
+
+  shout_id String
+  shout    Shout  @relation(fields: [shout_id], references: [id], onDelete: Cascade)
+
+  @@map("shout_medias")
+}
+
+model ShoutLike {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  shout_id String
+  shout    Shout  @relation(fields: [shout_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, shout_id])
+  @@map("shout_likes")
+}
+
+model ShoutComment {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  content String @db.Text
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  shout_id String
+  shout    Shout  @relation(fields: [shout_id], references: [id], onDelete: Cascade)
+
+  parent_id String?
+  parent    ShoutComment?  @relation("CommentReplies", fields: [parent_id], references: [id])
+  replies   ShoutComment[] @relation("CommentReplies")
+
+  @@map("shout_comments")
+}
+
+model ShoutReport {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  shout_id String
+  shout    Shout  @relation(fields: [shout_id], references: [id], onDelete: Cascade)
+
+  reason String?
+
+  @@unique([user_id, shout_id])
+  @@map("shout_reports")
+}
+
+// ---------End Shout (Social) schema---------
 
 // this table stores example
 // model Note {
