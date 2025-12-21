@@ -151,7 +151,7 @@ export class ShoutController {
 
   @ApiOperation({ summary: 'report a shout' })
   @Post(':id/report')
-  report(@GetUser() user, @Param('id') id: string) {
-    return this.shoutService.report(id, user.userId);
+  report(@GetUser() user, @Param('id') id: string, @Body() body) {
+    return this.shoutService.report(id, user.userId, body.reason);
   }
 }

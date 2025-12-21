@@ -16,7 +16,6 @@ import { DateHelper } from '../../common/helper/date.helper';
 import { StripePayment } from '../../common/lib/Payment/stripe/StripePayment';
 import { StringHelper } from '../../common/helper/string.helper';
 import { CreateUserDto } from './dto/create-user.dto';
-import { LocationService } from '../../common/lib/LocationService';
 
 @Injectable()
 export class AuthService {
@@ -47,15 +46,6 @@ export class AuthService {
     longitude: number;
   }) {
     try {
-      // Check location
-      // const isAllowed = await LocationService.isLocationInBangladesh(latitude, longitude);
-      // if (!isAllowed) {
-      //   return {
-      //     statusCode: 403,
-      //     message: 'Access restricted to Bangladesh only.',
-      //   };
-      // }
-
       // Check if email already exist
       const userEmailExist = await UserRepository.exist({
         field: 'email',
@@ -107,10 +97,10 @@ export class AuthService {
         country: 'Bangladesh',
       });
 
-      if (user == null && user.success == false) {
+      if (!user || !user.success) {
         return {
           success: false,
-          message: 'Failed to create account',
+          message: user?.message || 'Failed to create account',
         };
       }
 
@@ -284,16 +274,6 @@ export class AuthService {
       }
 
       if (updateUserDto.latitude && updateUserDto.longitude) {
-        const isAllowed = await LocationService.isLocationInBangladesh(
-          updateUserDto.latitude,
-          updateUserDto.longitude,
-        );
-        if (!isAllowed) {
-          return {
-            success: false,
-            message: 'Access restricted to Bangladesh only.',
-          };
-        }
         data.latitude = updateUserDto.latitude;
         data.longitude = updateUserDto.longitude;
         data.country = 'Bangladesh';
@@ -1197,6 +1177,51 @@ export class AuthService {
       return {
         success: true,
         message: 'Support request sent successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  async reportUser(
+    reported_user_id: string,
+    reporter_user_id: string,
+    reason: string,
+  ) {
+    try {
+      if (reported_user_id === reporter_user_id) {
+        return {
+          success: false,
+          message: 'You cannot report yourself',
+        };
+      }
+
+      const existingReport = await this.prisma.userReport.findFirst({
+        where: {
+          reported_id: reported_user_id,
+          reporter_id: reporter_user_id,
+        },
+      });
+      if (existingReport) {
+        return {
+          success: false,
+          message: 'You have already reported this user',
+        };
+      }
+
+      await this.prisma.userReport.create({
+        data: {
+          reported_id: reported_user_id,
+          reporter_id: reporter_user_id,
+          reason,
+        },
+      });
+      return {
+        success: true,
+        message: 'User reported successfully',
       };
     } catch (error) {
       return {

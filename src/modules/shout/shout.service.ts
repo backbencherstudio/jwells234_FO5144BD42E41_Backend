@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SazedStorage } from '../../common/lib/Disk/SazedStorage';
 import { StringHelper } from '../../common/helper/string.helper';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { NotificationRepository } from '../../common/repository/notification/notification.repository';
 
 @Injectable()
 export class ShoutService {
@@ -333,6 +334,33 @@ export class ShoutService {
           user_id: userId,
         },
       });
+
+      // Notification
+      try {
+        const shout = await this.prisma.shout.findUnique({
+          where: { id },
+          select: { user_id: true },
+        });
+
+        if (shout && shout.user_id !== userId) {
+          const liker = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, username: true },
+          });
+          const likerName = liker?.name || liker?.username || 'Someone';
+
+          await NotificationRepository.createNotification({
+            sender_id: userId,
+            receiver_id: shout.user_id,
+            text: `${likerName} liked your shout`,
+            type: 'message',
+            entity_id: id,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending like notification:', notifError);
+      }
+
       return {
         success: true,
         message: 'Shout liked',
@@ -383,6 +411,49 @@ export class ShoutService {
           },
         },
       });
+
+      // Notification
+      try {
+        const commenterName =
+          comment.user.name || comment.user.username || 'Someone';
+
+        if (createCommentDto.parent_id) {
+          // Reply Notification
+          const parentComment = await this.prisma.shoutComment.findUnique({
+            where: { id: createCommentDto.parent_id },
+            select: { user_id: true },
+          });
+
+          if (parentComment && parentComment.user_id !== userId) {
+            await NotificationRepository.createNotification({
+              sender_id: userId,
+              receiver_id: parentComment.user_id,
+              text: `${commenterName} replied to your comment`,
+              type: 'comment',
+              entity_id: id,
+            });
+          }
+        } else {
+          // Comment Notification
+          const shout = await this.prisma.shout.findUnique({
+            where: { id },
+            select: { user_id: true },
+          });
+
+          if (shout && shout.user_id !== userId) {
+            await NotificationRepository.createNotification({
+              sender_id: userId,
+              receiver_id: shout.user_id,
+              text: `${commenterName} commented on your shout`,
+              type: 'comment',
+              entity_id: id,
+            });
+          }
+        }
+      } catch (notifError) {
+        console.error('Error sending comment notification:', notifError);
+      }
+
       return {
         success: true,
         message: 'Comment added',
@@ -456,6 +527,27 @@ export class ShoutService {
         },
       });
 
+      // Notification
+      try {
+        if (originalShout.user_id !== userId) {
+          const sharer = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, username: true },
+          });
+          const sharerName = sharer?.name || sharer?.username || 'Someone';
+
+          await NotificationRepository.createNotification({
+            sender_id: userId,
+            receiver_id: originalShout.user_id,
+            text: `${sharerName} shared your shout`,
+            type: 'message',
+            entity_id: shout.id,
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending share notification:', notifError);
+      }
+
       const result = await this.getPostById(shout.id, userId);
       return {
         success: true,
@@ -470,7 +562,7 @@ export class ShoutService {
     }
   }
 
-  async report(id: string, userId: string) {
+  async report(id: string, userId: string, reason: string) {
     try {
       const existingShout = await this.prisma.shout.findUnique({
         where: { id },
@@ -479,6 +571,13 @@ export class ShoutService {
         return {
           success: false,
           message: 'Shout not found',
+        };
+      }
+
+      if (existingShout.user_id === userId) {
+        return {
+          success: false,
+          message: 'You cannot report your own shout',
         };
       }
 
@@ -499,6 +598,7 @@ export class ShoutService {
         data: {
           shout_id: id,
           user_id: userId,
+          reason,
         },
       });
       return {

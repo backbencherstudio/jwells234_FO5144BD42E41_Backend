@@ -90,16 +90,24 @@ model User {
   ucodes               Ucode[]
   roles                Role[]
   role_users           RoleUser[]
+
   payment_transactions PaymentTransaction[]
   paymentMethods       PaymentMethod[]
-  subscription         Subscription?        @relation(fields: [subscriptionId], references: [id])
-  subscriptionId       String?
+
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String?
 
   // Shout relations
   shouts         Shout[]
   shout_likes    ShoutLike[]
   shout_comments ShoutComment[]
   shoutReports   ShoutReport[]
+
+  // User Report relations
+  reports_made     UserReport[] @relation("reporter")
+  reports_received UserReport[] @relation("reported")
+
+  saved_locations SavedLocation[]
 
   @@map("users")
 }
@@ -293,6 +301,7 @@ model SubsPlan {
 
   // Trial (for free plan)
   trialDays Int?
+  type      SubscriptionPlan @default(FREE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -331,10 +340,14 @@ model Subscription {
   plan   SubsPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   // Required for tracking
-  startDate   DateTime  @default(now())
-  endDate     DateTime?
-  trialEndsAt DateTime?
-  status      String?
+  startDate     DateTime  @default(now())
+  endDate       DateTime?
+  trialEndsAt   DateTime?
+  status        String?
+  remainingDays Int?
+
+  // Plan type
+  type String
 
   // Stripe subscription
   stripeSubId String?
@@ -342,6 +355,7 @@ model Subscription {
   // Auto-renew
   isActive          Boolean @default(true)
   cancelAtPeriodEnd Boolean @default(false)
+  isTrial           Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -352,8 +366,9 @@ model Subscription {
 
 enum SubscriptionPlan {
   FREE
-  PREMIUM_MONTHLY
-  PREMIUM_YEARLY
+  TRIALING
+  BASIC
+  PREMIUM
 }
 
 // ---------Start Chat schema---------
@@ -615,6 +630,7 @@ model ShoutComment {
 model ShoutReport {
   id         String   @id @default(cuid())
   created_at DateTime @default(now())
+  status     ReportStatus @default(PENDING)
 
   user_id String
   user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -627,6 +643,47 @@ model ShoutReport {
   @@unique([user_id, shout_id])
   @@map("shout_reports")
 }
+
+model UserReport {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  status     ReportStatus @default(PENDING)
+
+  reporter_id String
+  reporter    User   @relation("reporter", fields: [reporter_id], references: [id], onDelete: Cascade)
+
+  reported_id String
+  reported    User   @relation("reported", fields: [reported_id], references: [id], onDelete: Cascade)
+
+  reason String?
+
+  @@unique([reporter_id, reported_id])
+  @@map("user_reports")
+}
+
+model SavedLocation {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  name      String
+  address   String?
+  latitude  Decimal  @db.Decimal(10, 7)
+  longitude Decimal  @db.Decimal(10, 7)
+  place_id  String?
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("saved_locations")
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+}
+
 
 // ---------End Shout (Social) schema---------
 

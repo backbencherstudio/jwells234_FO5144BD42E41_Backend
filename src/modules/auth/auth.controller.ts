@@ -31,6 +31,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { AppleAuthGuard } from './guards/apple-auth.guard';
 import { GetUser } from './decorators/get-user.decorator';
 
+import { LocationGuard } from '../../common/guard/location.guard';
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -38,7 +40,7 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Get user details' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, LocationGuard)
   @Get('me')
   async me(@Req() req: Request) {
     try {
@@ -58,12 +60,14 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Register a user' })
   @Post('register')
+  @UseGuards(LocationGuard)
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: memoryStorage(),
     }),
   )
   async create(
+    @Req() req: Request,
     @Body() data: CreateUserDto,
 
     @UploadedFile() avatar?: Express.Multer.File,
@@ -74,8 +78,15 @@ export class AuthController {
       const username = data.username;
       const password = data.password;
       const type = data.type;
-      const latitude = data.latitude;
-      const longitude = data.longitude;
+      
+      let latitude = data.latitude;
+      let longitude = data.longitude;
+
+      if (latitude === undefined || longitude === undefined) {
+        latitude = req.headers['x-latitude'] ? parseFloat(req.headers['x-latitude'] as string) : undefined;
+        longitude = req.headers['x-longitude'] ? parseFloat(req.headers['x-longitude'] as string) : undefined;
+      }
+
       const avatarFile = avatar;
 
       // console.log('hello', avatarFile);
@@ -251,7 +262,7 @@ export class AuthController {
   // update user
   @ApiOperation({ summary: 'Update user' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, LocationGuard)
   @Patch('update')
   @UseInterceptors(
     FileInterceptor('avatar', {
@@ -259,12 +270,22 @@ export class AuthController {
     }),
   )
   async updateUser(
-    @Req() req: Request,
+    @Req() req: any,
     @Body() data: UpdateUserDto,
     @UploadedFile() avatar: Express.Multer.File,
   ) {
     try {
       const user_id = req.user.userId;
+
+      if (data.latitude === undefined || data.longitude === undefined) {
+        const latHeader = req.headers['x-latitude'];
+        const lngHeader = req.headers['x-longitude'];
+        if (latHeader && lngHeader) {
+          data.latitude = parseFloat(latHeader as string);
+          data.longitude = parseFloat(lngHeader as string);
+        }
+      }
+
       const response = await this.authService.updateUser(user_id, data, avatar);
       console.log('user_id', user_id);
       console.log('data', data);
@@ -609,7 +630,7 @@ export class AuthController {
     try {
       const name = user.name;
       const email = user.email;
-      
+
       const subject = data.subject;
       const message = data.message;
 
@@ -633,6 +654,45 @@ export class AuthController {
         message,
       );
 
+      return response;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'Report an user' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('report-user')
+  async reportUser(
+    @GetUser() user,
+    @Body()
+    data: {
+      reported_user_id: string;
+      reason: string;
+    },
+  ) {
+    try {
+      const reporting_user_id = user.userId;
+      const reported_user_id = data.reported_user_id;
+      const reason = data.reason;
+      if (!reported_user_id) {
+        throw new HttpException(
+          'Reported user ID not provided',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      if (!reason) {
+        throw new HttpException('Reason not provided', HttpStatus.UNAUTHORIZED);
+      }
+      const response = await this.authService.reportUser(
+        reporting_user_id,
+        reported_user_id,
+        reason,
+      );
       return response;
     } catch (error) {
       return {

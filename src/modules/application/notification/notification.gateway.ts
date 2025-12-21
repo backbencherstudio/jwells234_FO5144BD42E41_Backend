@@ -11,8 +11,6 @@ import { Server, Socket } from 'socket.io';
 import { OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 import { NotificationService } from './notification.service';
-import { CreateNotificationDto } from './dto/create-notification.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
 import appConfig from '../../../config/app.config';
 
 @WebSocketGateway({
@@ -33,8 +31,8 @@ export class NotificationGateway
   private redisPubClient: Redis;
   private redisSubClient: Redis;
 
-  // Map to store connected clients
-  private clients = new Map<string, string>(); // userId -> socketId
+  // Map to store connected clients (UserId -> Set of SocketIds)
+  private clients = new Map<string, Set<string>>();
 
   constructor(private readonly notificationService: NotificationService) {}
 
@@ -52,8 +50,24 @@ export class NotificationGateway
     });
 
     this.redisSubClient.subscribe('notification', (err, message: string) => {
-      const data = JSON.parse(message);
-      this.server.emit('receiveNotification', data);
+      if (err) {
+        console.error('Redis subscribe error:', err);
+        return;
+      }
+      try {
+        const data = JSON.parse(message);
+        // Only send to the specific receiver if they are connected
+        if (data.receiver_id) {
+          const userSockets = this.clients.get(data.receiver_id);
+          if (userSockets) {
+            userSockets.forEach((socketId) => {
+              this.server.to(socketId).emit('receiveNotification', data);
+            });
+          }
+        }
+      } catch (parseError) {
+        console.error('Error parsing notification message:', parseError);
+      }
     });
   }
 
@@ -62,22 +76,26 @@ export class NotificationGateway
   }
 
   async handleConnection(client: Socket, ...args: any[]) {
-    // console.log('new connection!', client.id);
-    const userId = client.handshake.query.userId as string; // User ID passed as query parameter
+    const userId = client.handshake.query.userId as string;
     if (userId) {
-      this.clients.set(userId, client.id);
+      if (!this.clients.has(userId)) {
+        this.clients.set(userId, new Set());
+      }
+      this.clients.get(userId).add(client.id);
       console.log(`User ${userId} connected with socket ${client.id}`);
     }
   }
 
   handleDisconnect(client: Socket) {
-    // console.log('client disconnected!', client.id);
-    const userId = [...this.clients.entries()].find(
-      ([, socketId]) => socketId === client.id,
-    )?.[0];
-    if (userId) {
-      this.clients.delete(userId);
-      console.log(`User ${userId} disconnected`);
+    for (const [userId, sockets] of this.clients.entries()) {
+      if (sockets.has(client.id)) {
+        sockets.delete(client.id);
+        if (sockets.size === 0) {
+          this.clients.delete(userId);
+        }
+        console.log(`User ${userId} disconnected socket ${client.id}`);
+        break;
+      }
     }
   }
 
@@ -102,33 +120,5 @@ export class NotificationGateway
     } else {
       // console.log(`User ${data.userId} not connected`);
     }
-  }
-
-  @SubscribeMessage('createNotification')
-  create(@MessageBody() createNotificationDto: CreateNotificationDto) {
-    return this.notificationService.create(createNotificationDto);
-  }
-
-  @SubscribeMessage('findAllNotification')
-  findAll() {
-    return this.notificationService.findAll();
-  }
-
-  @SubscribeMessage('findOneNotification')
-  findOne(@MessageBody() id: number) {
-    return this.notificationService.findOne(id);
-  }
-
-  @SubscribeMessage('updateNotification')
-  update(@MessageBody() updateNotificationDto: UpdateNotificationDto) {
-    return this.notificationService.update(
-      updateNotificationDto.id,
-      updateNotificationDto,
-    );
-  }
-
-  @SubscribeMessage('removeNotification')
-  remove(@MessageBody() id: number) {
-    return this.notificationService.remove(id);
   }
 }

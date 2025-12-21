@@ -22,6 +22,8 @@ import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { ShoutModule } from './modules/shout/shout.module';
+import { MapExploreModule } from './modules/map-explore/map-explore.module';
+import { NotificationModule } from './modules/application/notification/notification.module';
 
 @Module({
   imports: [
@@ -79,6 +81,8 @@ import { ShoutModule } from './modules/shout/shout.module';
     PaymentModule,
     SubscriptionModule,
     ShoutModule,
+    MapExploreModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [
