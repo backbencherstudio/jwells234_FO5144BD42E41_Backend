@@ -2,7 +2,7 @@ import axios from 'axios';
 import appConfig from '../../config/app.config';
 
 export class LocationService {
-  static async isLocationInBangladesh(lat: number, lng: number): Promise<boolean> {
+  static async isLocationAllowed(lat: number, lng: number): Promise<boolean> {
     const apiKey = appConfig().app.googleMapsApiKey;
     
     if (!apiKey) {
@@ -26,7 +26,12 @@ export class LocationService {
       for (const result of results) {
         for (const component of result.address_components) {
           if (component.types.includes('country')) {
-            if (component.long_name === 'Bangladesh' || component.short_name === 'BD') {
+            if (
+              component.long_name === 'Bangladesh' || 
+              component.short_name === 'BD' ||
+              component.long_name === 'Nigeria' || 
+              component.short_name === 'NG'
+            ) {
               return true;
             }
           }

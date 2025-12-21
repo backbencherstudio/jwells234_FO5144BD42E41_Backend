@@ -492,7 +492,7 @@ export class StripePayment {
     customer_id,
     price_id,
     payment_method_id,
-    trial_period_days,
+    // trial_period_days,
   }: {
     customer_id: string;
     price_id: string;
@@ -503,7 +503,7 @@ export class StripePayment {
       customer: customer_id,
       items: [{ price: price_id }],
       expand: ['latest_invoice.payment_intent'],
-      trial_period_days: trial_period_days,
+      // trial_period_days: trial_period_days,
     };
 
     if (payment_method_id) {

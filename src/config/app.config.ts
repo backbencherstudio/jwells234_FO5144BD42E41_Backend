@@ -100,6 +100,10 @@ export default () => ({
     },
   },
 
+  subscription: {
+    trial_days: parseInt(process.env.SUBSCRIPTION_TRIAL_DAYS || '14', 10),
+  },
+
   /**
    * Storage directory
    */

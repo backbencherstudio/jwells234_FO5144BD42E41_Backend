@@ -25,11 +25,11 @@ export class CreateUserDto {
   })
   type?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty()
   latitude: number;
 
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty()
   longitude: number;
 

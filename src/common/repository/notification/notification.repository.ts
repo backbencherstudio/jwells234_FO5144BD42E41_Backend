@@ -1,6 +1,15 @@
 import { PrismaClient } from '@prisma/client';
+import Redis from 'ioredis';
+import appConfig from '../../../config/app.config';
 
 const prisma = new PrismaClient();
+
+// Initialize Redis client for publishing notifications
+const redis = new Redis({
+  host: appConfig().redis.host,
+  port: Number(appConfig().redis.port),
+  password: appConfig().redis.password,
+});
 
 export class NotificationRepository {
   /**
@@ -64,6 +73,30 @@ export class NotificationRepository {
         ...notificationData,
       },
     });
+
+    // Fetch full details to send via Redis
+    try {
+      const fullNotification = await prisma.notification.findUnique({
+        where: { id: notification.id },
+        include: {
+          notification_event: true,
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+
+      if (fullNotification) {
+        await redis.publish('notification', JSON.stringify(fullNotification));
+      }
+    } catch (error) {
+      console.error('Error publishing notification to Redis:', error);
+    }
 
     return notification;
   }
