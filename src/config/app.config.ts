@@ -85,6 +85,10 @@ export default () => ({
       secret_key: process.env.STRIPE_SECRET_KEY,
       webhook_secret: process.env.STRIPE_WEBHOOK_SECRET,
     },
+    paystack: {
+      secret_key: process.env.PAYSTACK_SECRET_KEY,
+      public_key: process.env.PAYSTACK_PUBLIC_KEY,
+    },
     paypal: {
       client_id: process.env.PAYPAL_CLIENT_ID,
       secret: process.env.PAYPAL_SECRET,

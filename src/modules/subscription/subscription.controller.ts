@@ -1,10 +1,9 @@
-import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateProductAndPriceDto } from './dto/createProductAndPrice.dto';
-import { AddCardDto } from './dto/AddCardDto.dto';
+import { ChargeCardDto, SubmitOtpDto } from './dto/ChargeCardDto.dto';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 
 @ApiTags('subscription')
@@ -33,15 +32,21 @@ export class SubscriptionController {
   }
 
   @ApiOperation({ summary: 'create product & price' })
-  @Post('create-product-price')
-  createProductAndPrice(@Body() dto: CreateProductAndPriceDto) {
-    return this.subscriptionService.createProductAndPrice(dto);
+  @Post('create-plan-price')
+  createPlanAndPrice(@Body() dto: CreateProductAndPriceDto) {
+    return this.subscriptionService.createPlanAndPrice(dto);
   }
 
-  @ApiOperation({ summary: 'Add card' })
-  @Post('add/cards')
-  addCard(@Req() req, @Body() addCardDto: AddCardDto) {
-    return this.subscriptionService.addCard(req.user, addCardDto);
+  @ApiOperation({ summary: 'Charge Card Directly (Custom Checkout)' })
+  @Post('payment/charge')
+  chargeCard(@GetUser() user, @Body() dto: ChargeCardDto) {
+    return this.subscriptionService.chargeCard(user, dto);
+  }
+
+  @ApiOperation({ summary: 'Submit OTP for Charge' })
+  @Post('payment/otp')
+  submitOtp(@Body() dto: SubmitOtpDto) {
+    return this.subscriptionService.submitOtp(dto);
   }
 
   @ApiOperation({ summary: 'Get User Subscription Status' })

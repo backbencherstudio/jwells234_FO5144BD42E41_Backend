@@ -1,11 +1,11 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { StripePayment } from '../../common/lib/Payment/stripe/StripePayment';
+// import { StripePayment } from '../../common/lib/Payment/stripe/StripePayment';
+import { PaystackPayment } from '../../common/lib/Payment/paystack/PaystackPayment';
 import appConfig from '../../config/app.config';
 import { SubscriptionPlan } from '@prisma/client';
 import { CreateProductAndPriceDto } from './dto/createProductAndPrice.dto';
-import { AddCardDto } from './dto/AddCardDto.dto';
+import { ChargeCardDto, SubmitOtpDto } from './dto/ChargeCardDto.dto';
 
 @Injectable()
 export class SubscriptionService {
@@ -32,7 +32,10 @@ export class SubscriptionService {
       },
     });
 
-    if (activeSubscription && activeSubscription.type !== SubscriptionPlan.FREE) {
+    if (
+      activeSubscription &&
+      activeSubscription.type !== SubscriptionPlan.FREE
+    ) {
       throw new BadRequestException('User already has an active subscription');
     }
 
@@ -104,14 +107,25 @@ export class SubscriptionService {
   }
 
   async getSubscriptionStatus(userId: string) {
+    // Prioritize finding an ACTIVE subscription
     let subscription = await this.prisma.subscription.findFirst({
       where: {
         userId: userId,
-      },
-      orderBy: {
-        createdAt: 'desc',
+        isActive: true,
       },
     });
+
+    // If no active subscription found, get the latest one (to show canceled/expired status)
+    if (!subscription) {
+      subscription = await this.prisma.subscription.findFirst({
+        where: {
+          userId: userId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    }
 
     if (!subscription) {
       return {
@@ -152,31 +166,71 @@ export class SubscriptionService {
       }
     }
 
+    // Optional: Fetch live status from Paystack if it's a recurring subscription
+    let paystackStatus = null;
+    if (
+      subscription.paystackSubId &&
+      subscription.paystackSubId.startsWith('SUB_')
+    ) {
+      try {
+        paystackStatus = await PaystackPayment.fetchSubscription(
+          subscription.paystackSubId,
+        );
+      } catch (e) {
+        console.warn('Failed to fetch Paystack status', e.message);
+      }
+    }
+
     return {
       success: true,
       subscription: subscription,
+      paystackDetails: paystackStatus, // Include raw Paystack data
     };
   }
 
-  async createProductAndPrice(dto: CreateProductAndPriceDto) {
-    
-    const { product, price } = await StripePayment.createProductAndPrice({
-      name: dto.name,
-      unit_amount: Math.round(dto.price * 100), // Stripe requires cents
-      currency: dto.currency,
-      interval: dto.interval,
-      interval_count: dto.interval_count,
-    });
+  async createPlanAndPrice(dto: CreateProductAndPriceDto) {
+    let paystackPlanId = null;
+    let paystackPlanCode = null;
+
+    // Only create Paystack plan if price > 0
+    if (dto.price > 0) {
+      try {
+        const plan = await PaystackPayment.createPlan({
+          name: dto.name,
+          amount: Math.round(dto.price * 100), // Paystack takes amount in kobo
+          interval: dto.interval,
+          description: dto.product_description,
+        });
+        console.log('Created Paystack Plan:', plan);
+        paystackPlanId = String(plan.id);
+        paystackPlanCode = plan.plan_code;
+      } catch (error) {
+        console.warn('Skipping Paystack Plan creation (likely free plan or error):', error.message);
+      }
+    }
+
+    // Map Paystack interval (monthly/annually) to Prisma Interval (MONTH/YEAR)
+    let dbInterval: any = 'monthly';
+    const interval = dto.interval.toLowerCase();
+    if (interval === 'monthly') {
+      dbInterval = 'monthly';
+    } else if (interval === 'quarterly') {
+      dbInterval = 'quarterly';
+    } else if (interval === 'biannually') {
+      dbInterval = 'biannually';
+    } else if (interval === 'annually' || interval === 'yearly') {
+      dbInterval = 'annually';
+    }
 
     const productRecord = await this.prisma.subsPlan.create({
       data: {
-        stripeProductId: product.id,
-        stripePriceId: price.id,
+        paystackPlanId: paystackPlanId,
+        paystackPlanCode: paystackPlanCode,
         name: dto.name,
         slug: dto.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         price: dto.price,
         currency: dto.currency,
-        interval: dto.interval.toUpperCase() as any,
+        interval: dbInterval,
         intervalCount: dto.interval_count,
         description: dto.product_description,
         price_description: dto.price_description,
@@ -188,118 +242,228 @@ export class SubscriptionService {
     return productRecord;
   }
 
-  async addCard(user: any, addCardDto: AddCardDto) {
-    try {
-      const dbUser = await this.prisma.user.findUnique({
-        where: { id: user.userId },
-      });
+  async chargeCard(user: any, dto: ChargeCardDto) {
+    const dbUser = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+    });
 
-      if (!dbUser) {
-        throw new BadRequestException('User not found');
-      }
+    if (!dbUser) {
+      throw new BadRequestException('User not found');
+    }
 
-      // Check if user already has an active subscription
-      const existingSubscription = await this.prisma.subscription.findFirst({
-        where: {
-          userId: dbUser.id,
-        },
-      });
+    // Check if user already has an active subscription
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId: user.userId,
+        isActive: true,
+      },
+    });
 
-      if (existingSubscription && existingSubscription.isActive) {
+    if (activeSubscription) {
+      // Check if it is expired just in case the status wasn't updated
+      const now = new Date();
+      if (activeSubscription.endDate && now < activeSubscription.endDate) {
         throw new BadRequestException(
-          'User already has an active subscription',
+          'User already has an active subscription. Please cancel it before subscribing to a new plan.',
         );
       }
+    }
 
-      let customerId = dbUser.billing_id;
+    const plan = await this.prisma.subsPlan.findUnique({
+      where: { id: dto.planId },
+    });
 
-      if (!customerId) {
-        // Create Stripe Customer
-        const customer = await StripePayment.createCustomer({
-          email: dbUser.email,
-          name: `${dbUser.first_name} ${dbUser.last_name}`,
-          user_id: dbUser.id,
-        });
-        customerId = customer.id;
+    if (!plan) {
+      throw new BadRequestException('Plan not found');
+    }
 
-        // Update user with billing_id
-        await this.prisma.user.update({
-          where: { id: dbUser.id },
-          data: { billing_id: customerId },
-        });
+    // Charge the card
+    const charge = await PaystackPayment.chargeCard({
+      email: dbUser.email,
+      amount: String(Number(plan.price) * 100), // kobo
+      card: {
+        number: dto.cardNumber,
+        cvv: dto.cvv,
+        expiry_month: dto.expiryMonth,
+        expiry_year: dto.expiryYear,
+      },
+      pin: dto.pin,
+      plan: plan.paystackPlanCode, // This ensures it's a subscription
+      metadata: {
+        planId: plan.id,
+        userId: user.userId,
+      },
+    });
+
+    if (charge.status === 'success') {
+      await this.activateSubscription(user.userId, plan.id, charge);
+    }
+
+    return {
+      success: true,
+      message: charge.status,
+      data: charge,
+      reference: charge.reference,
+      requiresOtp:
+        charge.status === 'send_otp' ||
+        charge.status === 'send_pin' ||
+        charge.status === 'open_url',
+    };
+  }
+
+  async submitOtp(dto: SubmitOtpDto) {
+    const result = await PaystackPayment.submitOtp({
+      otp: dto.otp,
+      reference: dto.reference,
+    });
+
+    if (result.status === 'success') {
+      try {
+        // Fetch transaction to get metadata
+        const transaction = await PaystackPayment.verifyTransaction(
+          dto.reference,
+        );
+        if (
+          transaction.metadata &&
+          transaction.metadata.planId &&
+          transaction.metadata.userId
+        ) {
+          await this.activateSubscription(
+            transaction.metadata.userId,
+            transaction.metadata.planId,
+            transaction,
+          );
+        }
+      } catch (e) {
+        console.error('Error activating subscription after OTP:', e);
       }
+    }
 
-      const productRecord = await this.prisma.subsPlan.findFirst({
-        where: { id: addCardDto.productId },
-      });
-      if (!productRecord) {
-        throw new BadRequestException('Subscription plan not found for user');
-      }
+    return {
+      success: true,
+      message: result.status,
+      data: result,
+    };
+  }
 
-      const paymentMethod = await StripePayment.createPaymentMethod(
-        addCardDto.token,
-        dbUser.billing_id,
+  private async activateSubscription(
+    userId: string,
+    planId: string,
+    transaction: any,
+  ) {
+    const dbUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!dbUser) return; // Should not happen
+
+    const plan = await this.prisma.subsPlan.findUnique({
+      where: { id: planId },
+    });
+    if (!plan) return;
+
+    // Calculate next billing date
+    const startDate = new Date();
+    if (plan.interval === 'monthly') {
+      startDate.setMonth(startDate.getMonth() + (plan.intervalCount || 1));
+    } else if (plan.interval === 'quarterly') {
+      startDate.setMonth(startDate.getMonth() + (plan.intervalCount || 3));
+    } else if (plan.interval === 'biannually') {
+      startDate.setMonth(startDate.getMonth() + (plan.intervalCount || 6));
+    } else if (plan.interval === 'annually') {
+      startDate.setFullYear(
+        startDate.getFullYear() + (plan.intervalCount || 1),
       );
+  }
 
-      const subscription = await StripePayment.createSubscription({
-        payment_method_id: paymentMethod.id,
-        customer_id: dbUser.billing_id,
-        price_id: productRecord.stripePriceId,
-        // trial_period_days: productRecord.trialDays,
+    let paystackSubCode = null;
+    let paystackEmailToken = null;
+
+    try {
+      // Create Subscription on Paystack (Future Start Date)
+      // This ensures auto-renewal works
+      const sub = await PaystackPayment.createSubscription({
+        customer: transaction.customer.customer_code || dbUser.email,
+        plan: plan.paystackPlanCode,
+        authorization: transaction.authorization.authorization_code,
+        start_date: startDate.toISOString(),
       });
+      paystackSubCode = sub.subscription_code;
+      paystackEmailToken = sub.email_token;
+    } catch (e) {
+      console.warn('Failed to create Paystack subscription:', e.message);
 
-      const existingSub = await this.prisma.subscription.findFirst({
-        where: { userId: dbUser.id },
-      });
+      // Handle duplicate subscription (User already subscribed to this plan)
+      if (
+        e.message.includes('already in place') ||
+        e.message.includes('duplicate')
+      ) {
+        try {
+          // Fetch existing subscription
+          // We need Paystack Customer ID and Plan ID (integers)
+          const customerId = transaction.customer.id;
+          const planId = Number(plan.paystackPlanId);
 
-      let updatedSubscription;
-      const subData = {
-        userId: dbUser.id,
-        isActive: true,
-        plan: { connect: { id: productRecord.id } },
-        startDate: new Date(
-          ((subscription as any).current_period_start ||
-            (subscription as any).start_date ||
-            (subscription as any).created) * 1000,
-        ),
-        endDate: (subscription as any).ended_at
-          ? new Date((subscription as any).ended_at * 1000)
-          : (subscription as any).current_period_end
-            ? new Date((subscription as any).current_period_end * 1000)
-            : (subscription as any).trial_end
-              ? new Date((subscription as any).trial_end * 1000)
-              : null,
-        trialEndsAt: (subscription as any).trial_end
-          ? new Date((subscription as any).trial_end * 1000)
-          : null,
+          if (customerId && planId) {
+            const subscriptions = await PaystackPayment.listSubscriptions({
+              customer: customerId,
+              plan: planId,
+            });
 
-        stripeSubId: subscription.id,
-        cancelAtPeriodEnd: (subscription as any).cancel_at_period_end || false,
-        status: (subscription as any).status,
-        type: productRecord.type.toUpperCase(),
-        isTrial: productRecord.trialDays > 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      if (existingSub) {
-        updatedSubscription = await this.prisma.subscription.update({
-          where: { id: existingSub.id },
-          data: subData,
-        });
-      } else {
-        updatedSubscription = await this.prisma.subscription.create({
-          data: subData,
-        });
+            // Find the active one
+            const activeSub = subscriptions.find(
+              (s) => s.status === 'active' || s.status === 'non-renewing',
+            );
+            if (activeSub) {
+              paystackSubCode = activeSub.subscription_code;
+              paystackEmailToken = activeSub.email_token;
+              console.log(
+                'Found existing Paystack subscription:',
+                paystackSubCode,
+              );
+            }
+          }
+        } catch (fetchErr) {
+          console.warn(
+            'Failed to fetch existing subscription:',
+            fetchErr.message,
+          );
+        }
       }
+    }
 
-      return {
-        success: true,
-        message: 'Card added successfully',
-        data: subscription,
-      };
-    } catch (error) {
-      throw new BadRequestException('Failed to add card: ' + error.message);
+    // Update Local DB
+    const existingSub = await this.prisma.subscription.findFirst({
+      where: { userId: dbUser.id },
+    });
+
+    const subData = {
+      userId: dbUser.id,
+      isActive: true,
+      plan: { connect: { id: plan.id } },
+      startDate: new Date(), // Active now
+      endDate: startDate, // Valid until next billing
+      trialEndsAt: null,
+      paystackSubId: paystackSubCode || `paystack_ref_${transaction.reference}`,
+      paystackEmailToken: paystackEmailToken,
+      cancelAtPeriodEnd: false,
+      status: 'active',
+      type: plan.type,
+      isTrial: false,
+      updatedAt: new Date(),
+    };
+
+    if (existingSub) {
+      await this.prisma.subscription.update({
+        where: { id: existingSub.id },
+        data: subData,
+      });
+    } else {
+      await this.prisma.subscription.create({
+        data: {
+          ...subData,
+          createdAt: new Date(),
+        },
+      });
     }
   }
 
@@ -326,13 +490,39 @@ export class SubscriptionService {
     }
 
     try {
-      let status = 'canceled';
+      if (
+        subscription.paystackSubId &&
+        subscription.paystackSubId.startsWith('SUB_')
+      ) {
+        let token = subscription.paystackEmailToken;
 
-      if (subscription.stripeSubId) {
-        const canceledSub = await StripePayment.cancelSubscription(
-          subscription.stripeSubId,
-        );
-        status = canceledSub.status;
+        if (!token) {
+          try {
+            const subDetails = await PaystackPayment.fetchSubscription(
+              subscription.paystackSubId,
+            );
+            if (subDetails) token = subDetails.email_token;
+          } catch (e) {
+            console.warn(
+              'Could not fetch Paystack subscription details:',
+              e.message,
+            );
+          }
+        }
+
+        if (token) {
+          try {
+            await PaystackPayment.disableSubscription({
+              code: subscription.paystackSubId,
+              token: token,
+            });
+          } catch (e) {
+            console.warn(
+              'Could not cancel Paystack subscription remotely:',
+              e.message,
+            );
+          }
+        }
       }
 
       // Update local DB
@@ -340,10 +530,8 @@ export class SubscriptionService {
         where: { id: subscription.id },
         data: {
           isActive: false,
-          status: status,
-          type: SubscriptionPlan.FREE,
-          endDate: new Date(),
-          remainingDays: 0,
+          status: 'canceled',
+          cancelAtPeriodEnd: true,
         },
       });
 
@@ -355,6 +543,107 @@ export class SubscriptionService {
       throw new BadRequestException(
         'Failed to cancel subscription: ' + error.message,
       );
+    }
+  }
+
+  async handleWebhook(event: any) {
+    console.log('Paystack Webhook Event:', event.event);
+
+    switch (event.event) {
+      case 'subscription.create':
+        await this.handleSubscriptionCreate(event.data);
+        break;
+      case 'charge.success':
+        await this.handleChargeSuccess(event.data);
+        break;
+      case 'subscription.disable':
+        await this.handleSubscriptionDisable(event.data);
+        break;
+      default:
+        console.log('Unhandled event:', event.event);
+    }
+  }
+
+  private async handleSubscriptionCreate(data: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: data.customer.email },
+    });
+    if (!user) return;
+
+    // Update the subscription with the real subscription code and email token
+    const sub = await this.prisma.subscription.findFirst({
+      where: { userId: user.id, isActive: true },
+    });
+
+    if (sub) {
+      await this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          paystackSubId: data.subscription_code,
+          paystackEmailToken: data.email_token,
+        },
+      });
+    }
+  }
+
+  private async handleChargeSuccess(data: any) {
+    // Only process if it's a subscription renewal (has plan)
+    if (!data.plan) return;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: data.customer.email },
+    });
+    if (!user) return;
+
+    const sub = await this.prisma.subscription.findFirst({
+      where: { userId: user.id, isActive: true },
+      include: { plan: true },
+    });
+
+    if (sub) {
+      // Calculate new end date based on plan interval
+      const currentPeriodEnd = new Date();
+      if (sub.plan.interval === 'monthly') {
+        currentPeriodEnd.setMonth(
+          currentPeriodEnd.getMonth() + (sub.plan.intervalCount || 1),
+        );
+      } else if (sub.plan.interval === 'quarterly') {
+        currentPeriodEnd.setMonth(
+          currentPeriodEnd.getMonth() + (sub.plan.intervalCount || 3),
+        );
+      } else if (sub.plan.interval === 'biannually') {
+        currentPeriodEnd.setMonth(
+          currentPeriodEnd.getMonth() + (sub.plan.intervalCount || 6),
+        );
+      } else if (sub.plan.interval === 'annually') {
+        currentPeriodEnd.setFullYear(
+          currentPeriodEnd.getFullYear() + (sub.plan.intervalCount || 1),
+        );
+      }
+
+      await this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          endDate: currentPeriodEnd,
+          status: 'active',
+        },
+      });
+    }
+  }
+
+  private async handleSubscriptionDisable(data: any) {
+    const sub = await this.prisma.subscription.findFirst({
+      where: { paystackSubId: data.subscription_code },
+    });
+
+    if (sub) {
+      await this.prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          isActive: false,
+          status: 'canceled',
+        },
+      });
     }
   }
 }

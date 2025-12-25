@@ -2,8 +2,10 @@ import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 import { SubscriptionPlan } from '@prisma/client';
 
 enum IntervalEnum {
-  MONTH = 'month',
-  YEAR = 'year',
+  MONTH = 'monthly',
+  QUARTER = 'quarterly',
+  BIANNUAL = 'biannually',
+  YEAR = 'annually',
 }
 
 export class CreateProductAndPriceDto {
