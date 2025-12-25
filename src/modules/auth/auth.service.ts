@@ -1,5 +1,9 @@
 // external imports
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
@@ -13,9 +17,11 @@ import { UcodeRepository } from '../../common/repository/ucode/ucode.repository'
 import { UpdateUserDto } from './dto/update-user.dto';
 import { SazedStorage } from '../../common/lib/Disk/SazedStorage';
 import { DateHelper } from '../../common/helper/date.helper';
-import { StripePayment } from '../../common/lib/Payment/stripe/StripePayment';
+// import { StripePayment } from '../../common/lib/Payment/stripe/StripePayment';
+import { PaystackPayment } from '../../common/lib/Payment/paystack/PaystackPayment';
 import { StringHelper } from '../../common/helper/string.helper';
 import { CreateUserDto } from './dto/create-user.dto';
+import { LocationService } from '../../common/lib/LocationService';
 
 @Injectable()
 export class AuthService {
@@ -46,6 +52,17 @@ export class AuthService {
     longitude: number;
   }) {
     try {
+      // Check location
+      const isAllowed = await LocationService.isLocationAllowed(
+        latitude,
+        longitude,
+      );
+      if (!isAllowed) {
+        throw new ForbiddenException(
+          'Access restricted to Bangladesh and Nigeria only.',
+        );
+      }
+
       // Check if email already exist
       const userEmailExist = await UserRepository.exist({
         field: 'email',
@@ -104,20 +121,20 @@ export class AuthService {
         };
       }
 
-      // create stripe customer account
-      const stripeCustomer = await StripePayment.createCustomer({
-        user_id: user.data.id,
+      // create paystack customer account
+      const paystackCustomer = await PaystackPayment.createCustomer({
         email: email,
-        name: name,
+        first_name: name.split(' ')[0] || name,
+        last_name: name.split(' ')[1] || '',
       });
 
-      if (stripeCustomer) {
+      if (paystackCustomer) {
         await this.prisma.user.update({
           where: {
             id: user.data.id,
           },
           data: {
-            billing_id: stripeCustomer.id,
+            billing_id: paystackCustomer.customer_code,
           },
         });
       }
@@ -408,8 +425,22 @@ export class AuthService {
     }
   }
 
-  async login({ email, userId }) {
+  async login({ email, userId, latitude, longitude }) {
     try {
+      // Check location
+      if (latitude === undefined || longitude === undefined) {
+        throw new ForbiddenException('Location coordinates are required.');
+      }
+      const isAllowed = await LocationService.isLocationAllowed(
+        latitude,
+        longitude,
+      );
+      if (!isAllowed) {
+        throw new ForbiddenException(
+          'Access restricted to Bangladesh and Nigeria only.',
+        );
+      }
+
       const payload = { email: email, sub: userId };
 
       const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
@@ -436,10 +467,7 @@ export class AuthService {
         type: user.type,
       };
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      throw error;
     }
   }
 
@@ -460,18 +488,18 @@ export class AuthService {
         60 * 60 * 24 * 7,
       );
 
-      // create stripe customer account id
+      // create paystack customer account id
       try {
-        const stripeCustomer = await StripePayment.createCustomer({
-          user_id: user.id,
+        const paystackCustomer = await PaystackPayment.createCustomer({
           email: user.email,
-          name: `${user.first_name} ${user.last_name}`,
+          first_name: user.first_name,
+          last_name: user.last_name,
         });
 
-        if (stripeCustomer) {
+        if (paystackCustomer) {
           await this.prisma.user.update({
             where: { id: user.id },
-            data: { billing_id: stripeCustomer.id },
+            data: { billing_id: paystackCustomer.customer_code },
           });
         }
       } catch (error) {
@@ -523,18 +551,18 @@ export class AuthService {
         60 * 60 * 24 * 7,
       );
 
-      // create stripe customer account id
+      // create paystack customer account id
       try {
-        const stripeCustomer = await StripePayment.createCustomer({
-          user_id: user.id,
+        const paystackCustomer = await PaystackPayment.createCustomer({
           email: user.email,
-          name: `${user.first_name} ${user.last_name}`,
+          first_name: user.first_name,
+          last_name: user.last_name,
         });
 
-        if (stripeCustomer) {
+        if (paystackCustomer) {
           await this.prisma.user.update({
             where: { id: user.id },
-            data: { billing_id: stripeCustomer.id },
+            data: { billing_id: paystackCustomer.customer_code },
           });
         }
       } catch (error) {
@@ -558,8 +586,26 @@ export class AuthService {
     }
   }
 
-  async refreshToken(user_id: string, refreshToken: string) {
+  async refreshToken(
+    user_id: string,
+    refreshToken: string,
+    latitude?: number,
+    longitude?: number,
+  ) {
     try {
+      // Check location if provided (Mobile App Re-open Scenario)
+      if (latitude !== undefined && longitude !== undefined) {
+        const isAllowed = await LocationService.isLocationAllowed(
+          latitude,
+          longitude,
+        );
+        if (!isAllowed) {
+          throw new ForbiddenException(
+            'Access restricted to Bangladesh and Nigeria only.',
+          );
+        }
+      }
+
       const storedToken = await this.redis.get(`refresh_token:${user_id}`);
 
       if (!storedToken || storedToken != refreshToken) {

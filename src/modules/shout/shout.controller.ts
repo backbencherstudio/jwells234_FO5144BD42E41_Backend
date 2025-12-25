@@ -25,10 +25,11 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { SubscriptionGuard } from 'src/common/guard/subscription.guard';
 
 @ApiTags('shout')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @Controller('shout')
 export class ShoutController {
   constructor(private readonly shoutService: ShoutService) {}

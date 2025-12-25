@@ -7,27 +7,20 @@ import { PrismaService } from '../../../prisma/prisma.service';
 export class ContactService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createContactDto: CreateContactDto) {
+  async create(createContactDto: CreateContactDto, user: any) {
     try {
-      const data = {};
-      if (createContactDto.first_name) {
-        data['first_name'] = createContactDto.first_name;
-      }
-      if (createContactDto.last_name) {
-        data['last_name'] = createContactDto.last_name;
-      }
-      if (createContactDto.email) {
-        data['email'] = createContactDto.email;
-      }
-      if (createContactDto.phone_number) {
-        data['phone_number'] = createContactDto.phone_number;
-      }
-      if (createContactDto.message) {
-        data['message'] = createContactDto.message;
+
+      if (!createContactDto.message) {
+        throw new Error('Message is required');
       }
 
       await this.prisma.contact.create({
-        data: data,
+        data: {
+          first_name: user?.first_name || 'Guest',
+          last_name: user?.last_name || 'User',
+          email: user?.email || 'guest@example.com',
+          message: createContactDto.message,
+        },
       });
 
       return {

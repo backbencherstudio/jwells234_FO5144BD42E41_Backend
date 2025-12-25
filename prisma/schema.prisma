@@ -277,8 +277,10 @@ model PaymentTransaction {
 }
 
 enum Interval {
-  MONTH
-  YEAR
+  monthly
+  quarterly
+  biannually
+  annually
 }
 
 model SubsPlan {
@@ -298,6 +300,10 @@ model SubsPlan {
   // Stripe
   stripeProductId String?
   stripePriceId   String?
+
+  // Paystack
+  paystackPlanId   String?
+  paystackPlanCode String?
 
   // Trial (for free plan)
   trialDays Int?
@@ -349,8 +355,9 @@ model Subscription {
   // Plan type
   type String
 
-  // Stripe subscription
-  stripeSubId String?
+  // paystack subscription
+  paystackSubId String?
+  paystackEmailToken String?
 
   // Auto-renew
   isActive          Boolean @default(true)
@@ -628,8 +635,8 @@ model ShoutComment {
 }
 
 model ShoutReport {
-  id         String   @id @default(cuid())
-  created_at DateTime @default(now())
+  id         String       @id @default(cuid())
+  created_at DateTime     @default(now())
   status     ReportStatus @default(PENDING)
 
   user_id String
@@ -645,8 +652,8 @@ model ShoutReport {
 }
 
 model UserReport {
-  id         String   @id @default(cuid())
-  created_at DateTime @default(now())
+  id         String       @id @default(cuid())
+  created_at DateTime     @default(now())
   status     ReportStatus @default(PENDING)
 
   reporter_id String
@@ -668,8 +675,8 @@ model SavedLocation {
 
   name      String
   address   String?
-  latitude  Decimal  @db.Decimal(10, 7)
-  longitude Decimal  @db.Decimal(10, 7)
+  latitude  Decimal @db.Decimal(10, 7)
+  longitude Decimal @db.Decimal(10, 7)
   place_id  String?
 
   user_id String
@@ -683,7 +690,6 @@ enum ReportStatus {
   REVIEWED
   RESOLVED
 }
-
 
 // ---------End Shout (Social) schema---------
 

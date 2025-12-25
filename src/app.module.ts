@@ -1,7 +1,7 @@
 // external imports
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 // import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-// import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { RedisModule } from '@nestjs-modules/ioredis';
@@ -14,6 +14,7 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 // import { ThrottlerBehindProxyGuard } from './common/guard/throttler-behind-proxy.guard';
+// import { LocationGuard } from './common/guard/location.guard';
 import { AbilityModule } from './ability/ability.module';
 import { MailModule } from './mail/mail.module';
 import { ApplicationModule } from './modules/application/application.module';
@@ -86,6 +87,10 @@ import { NotificationModule } from './modules/application/notification/notificat
   ],
   controllers: [AppController],
   providers: [
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: LocationGuard,
+    // },
     // disabling throttling for dev
     // {
     //   provide: APP_GUARD,

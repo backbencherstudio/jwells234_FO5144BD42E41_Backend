@@ -40,7 +40,7 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Get user details' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, LocationGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@Req() req: Request) {
     try {
@@ -60,7 +60,6 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Register a user' })
   @Post('register')
-  @UseGuards(LocationGuard)
   @UseInterceptors(
     FileInterceptor('avatar', {
       storage: memoryStorage(),
@@ -147,9 +146,19 @@ export class AuthController {
 
       const user_email = req.user.email;
 
+      let latitude = req.body.latitude;
+      let longitude = req.body.longitude;
+
+      if (latitude === undefined || longitude === undefined) {
+        latitude = req.headers['x-latitude'] ? parseFloat(req.headers['x-latitude'] as string) : undefined;
+        longitude = req.headers['x-longitude'] ? parseFloat(req.headers['x-longitude'] as string) : undefined;
+      }
+
       const response = await this.authService.login({
         userId: user_id,
         email: user_email,
+        latitude,
+        longitude,
       });
 
       // store to secure cookies
@@ -161,10 +170,11 @@ export class AuthController {
 
       res.json(response);
     } catch (error) {
-      return {
+      const status = error.getStatus ? error.getStatus() : (error.status || 500);
+      return res.status(status).json({
         success: false,
         message: error.message,
-      };
+      });
     }
   }
 
@@ -174,22 +184,34 @@ export class AuthController {
   @Post('refresh-token')
   async refreshToken(
     @Req() req: Request,
-    @Body() body: { refresh_token: string },
+    @Res() res: Response,
+    @Body() body: { refresh_token: string; latitude?: number; longitude?: number },
   ) {
     try {
       const user_id = req.user.userId;
 
+      let latitude = body.latitude;
+      let longitude = body.longitude;
+
+      if (latitude === undefined || longitude === undefined) {
+        latitude = req.headers['x-latitude'] ? parseFloat(req.headers['x-latitude'] as string) : undefined;
+        longitude = req.headers['x-longitude'] ? parseFloat(req.headers['x-longitude'] as string) : undefined;
+      }
+
       const response = await this.authService.refreshToken(
         user_id,
         body.refresh_token,
+        latitude,
+        longitude,
       );
 
-      return response;
+      return res.json(response);
     } catch (error) {
-      return {
+      const status = error.getStatus ? error.getStatus() : (error.status || 500);
+      return res.status(status).json({
         success: false,
         message: error.message,
-      };
+      });
     }
   }
 
@@ -262,7 +284,7 @@ export class AuthController {
   // update user
   @ApiOperation({ summary: 'Update user' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, LocationGuard)
+  @UseGuards(JwtAuthGuard)
   @Patch('update')
   @UseInterceptors(
     FileInterceptor('avatar', {

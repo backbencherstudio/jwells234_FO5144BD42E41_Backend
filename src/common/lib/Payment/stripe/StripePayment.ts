@@ -5,9 +5,9 @@ import { Fetch } from '../../Fetch';
 
 const STRIPE_SECRET_KEY = appConfig().payment.stripe.secret_key;
 
-const Stripe = new stripe(STRIPE_SECRET_KEY, {
+const Stripe = STRIPE_SECRET_KEY ? new stripe(STRIPE_SECRET_KEY, {
   apiVersion: '2025-03-31.basil',
-});
+}) : null;
 
 const STRIPE_WEBHOOK_SECRET = appConfig().payment.stripe.webhook_secret;
 /**

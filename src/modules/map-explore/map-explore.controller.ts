@@ -13,10 +13,11 @@ import { SaveLocationDto } from './dto/save-location.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { SubscriptionGuard } from 'src/common/guard/subscription.guard';
 
 @ApiTags('Map Explore')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, SubscriptionGuard)
 @Controller('map-explore')
 export class MapExploreController {
   constructor(private readonly mapExploreService: MapExploreService) {}
