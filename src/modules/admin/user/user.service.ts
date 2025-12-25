@@ -65,18 +65,36 @@ export class UserService {
         where: {
           ...where_condition,
         },
+        orderBy: { created_at: 'desc' },
         select: {
           id: true,
           name: true,
+          avatar: true,
+          username: true,
           email: true,
           phone_number: true,
           address: true,
           type: true,
+          status: true,
           approved_at: true,
           created_at: true,
           updated_at: true,
         },
       });
+
+      // check user premium or free 
+      for (const user of users) {
+        const activeSubscription = await this.prisma.subscription.findFirst({
+          where: {
+            userId: user.id,
+            isActive: true,
+            endDate: {
+              gt: new Date(),
+            },
+          },
+        });
+        user['subscription_status'] = activeSubscription ? 'premium' : 'free';
+      }
 
       return {
         success: true,
