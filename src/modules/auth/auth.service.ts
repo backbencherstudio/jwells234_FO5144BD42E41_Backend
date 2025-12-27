@@ -1117,7 +1117,7 @@ export class AuthService {
 
       await this.prisma.user.update({
         where: { id: user_id },
-        data: { status: 0 }, // 0: Inactive
+        data: { status: 'INACTIVE' }, // 0: Inactive
       });
       return {
         success: true,
@@ -1154,7 +1154,7 @@ export class AuthService {
 
       await this.prisma.user.update({
         where: { id: user_id },
-        data: { status: 1 }, // 1: Active
+        data: { status: 'ACTIVE' }, // 1: Active
       });
       return {
         success: true,

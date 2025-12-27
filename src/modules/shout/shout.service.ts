@@ -11,7 +11,7 @@ import { NotificationRepository } from '../../common/repository/notification/not
 export class ShoutService {
   constructor(private prisma: PrismaService) {}
 
-  private transformShout(shout: any, userId: string) {
+   private transformShout(shout: any, userId: string) {
     const isLiked = shout.likes && shout.likes.length > 0;
 
     try {

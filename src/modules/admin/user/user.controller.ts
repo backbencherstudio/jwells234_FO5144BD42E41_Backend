@@ -12,7 +12,12 @@ import {
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '../../../common/guard/role/role.enum';
 import { Roles } from '../../../common/guard/role/roles.decorator';
 import { RolesGuard } from '../../../common/guard/role/roles.guard';
@@ -42,7 +47,7 @@ export class UserController {
 
   @ApiResponse({ description: 'Get all users' })
   @Get()
-  async findAll(
+  async getAllUsers(
     @Query() query: { q?: string; type?: string; approved?: string },
   ) {
     try {
@@ -50,7 +55,7 @@ export class UserController {
       const type = query.type;
       const approved = query.approved;
 
-      const users = await this.userService.findAll({ q, type, approved });
+      const users = await this.userService.getAllUsers({ q, type, approved });
       return users;
     } catch (error) {
       return {
@@ -60,13 +65,11 @@ export class UserController {
     }
   }
 
-  // approve user
-  @Roles(Role.ADMIN)
-  @ApiResponse({ description: 'Approve a user' })
-  @Post(':id/approve')
-  async approve(@Param('id') id: string) {
+  @ApiResponse({ description: 'Warn a user by id' })
+  @Post(':id/warn')
+  async warnUser(@Param('id') id: string) {
     try {
-      const user = await this.userService.approve(id);
+      const user = await this.userService.warnUser(id);
       return user;
     } catch (error) {
       return {
@@ -76,13 +79,11 @@ export class UserController {
     }
   }
 
-  // reject user
-  @Roles(Role.ADMIN)
-  @ApiResponse({ description: 'Reject a user' })
-  @Post(':id/reject')
-  async reject(@Param('id') id: string) {
+  @ApiResponse({ description: 'Ban a user by id' })
+  @Post(':id/ban')
+  async banUser(@Param('id') id: string) {
     try {
-      const user = await this.userService.reject(id);
+      const user = await this.userService.banUser(id);
       return user;
     } catch (error) {
       return {
@@ -91,12 +92,44 @@ export class UserController {
       };
     }
   }
+
+  // approve user
+  // @Roles(Role.ADMIN)
+  // @ApiResponse({ description: 'Approve a user' })
+  // @Post(':id/approve')
+  // async approve(@Param('id') id: string) {
+  //   try {
+  //     const user = await this.userService.approve(id);
+  //     return user;
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
+
+  // // reject user
+  // @Roles(Role.ADMIN)
+  // @ApiResponse({ description: 'Reject a user' })
+  // @Post(':id/reject')
+  // async reject(@Param('id') id: string) {
+  //   try {
+  //     const user = await this.userService.reject(id);
+  //     return user;
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
 
   @ApiResponse({ description: 'Get a user by id' })
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async getUserById(@Param('id') id: string) {
     try {
-      const user = await this.userService.findOne(id);
+      const user = await this.userService.getUserById(id);
       return user;
     } catch (error) {
       return {
@@ -106,10 +139,11 @@ export class UserController {
     }
   }
 
+  @ApiResponse({ description: 'Update a user by id' })
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     try {
-      const user = await this.userService.update(id, updateUserDto);
+      const user = await this.userService.updateUser(id, updateUserDto);
       return user;
     } catch (error) {
       return {
@@ -119,10 +153,11 @@ export class UserController {
     }
   }
 
+  @ApiResponse({ description: 'Delete a user by id' })
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async deleteUser(@Param('id') id: string) {
     try {
-      const user = await this.userService.remove(id);
+      const user = await this.userService.deleteUser(id);
       return user;
     } catch (error) {
       return {

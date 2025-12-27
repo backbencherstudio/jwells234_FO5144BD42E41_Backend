@@ -34,7 +34,7 @@ export class UserService {
     }
   }
 
-  async findAll({
+  async getAllUsers({
     q,
     type,
     approved,
@@ -82,7 +82,7 @@ export class UserService {
         },
       });
 
-      // check user premium or free 
+      // check user premium or free
       for (const user of users) {
         const activeSubscription = await this.prisma.subscription.findFirst({
           where: {
@@ -93,7 +93,15 @@ export class UserService {
             },
           },
         });
-        user['subscription_status'] = activeSubscription ? 'premium' : 'free';
+        user['subscription_status'] = activeSubscription
+          ? activeSubscription.type
+          : 'free';
+        // add avatar url to user
+        if (user.avatar) {
+          user['avatar_url'] = SazedStorage.url(
+            appConfig().storageUrl.avatar + user.avatar,
+          );
+        }
       }
 
       return {
@@ -108,8 +116,15 @@ export class UserService {
     }
   }
 
-  async findOne(id: string) {
+  async getUserById(id: string) {
     try {
+      if (!id) {
+        return {
+          success: false,
+          message: 'User ID is required',
+        };
+      }
+
       const user = await this.prisma.user.findUnique({
         where: {
           id: id,
@@ -117,16 +132,41 @@ export class UserService {
         select: {
           id: true,
           name: true,
+          avatar: true,
+          username: true,
           email: true,
-          type: true,
           phone_number: true,
+          address: true,
+          type: true,
+          status: true,
           approved_at: true,
           created_at: true,
           updated_at: true,
-          avatar: true,
-          billing_id: true,
         },
       });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      // check user premium or free
+      if (user) {
+        const activeSubscription = await this.prisma.subscription.findFirst({
+          where: {
+            userId: user.id,
+            isActive: true,
+            endDate: {
+              gt: new Date(),
+            },
+          },
+        });
+        user['subscription_status'] = activeSubscription
+          ? activeSubscription.type
+          : 'free';
+      }
 
       // add avatar url to user
       if (user.avatar) {
@@ -135,12 +175,36 @@ export class UserService {
         );
       }
 
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-        };
-      }
+      const shouts = await this.prisma.shout.findMany({
+        where: {
+          user_id: id,
+        },
+        orderBy: { created_at: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+            },
+          },
+          medias: true,
+          _count: {
+            select: {
+              likes: true,
+              comments: true,
+              shares: true,
+            },
+          },
+          likes: {
+            where: { user_id: id },
+            select: { id: true },
+          },
+        },
+      });
+
+      user['shouts'] = shouts;
 
       return {
         success: true,
@@ -154,8 +218,49 @@ export class UserService {
     }
   }
 
-  async approve(id: string) {
+  async warnUser(id: string) {
     try {
+      if (!id) {
+        return {
+          success: false,
+          message: 'User ID is required',
+        };
+      }
+      const user = await this.prisma.user.findUnique({
+        where: { id: id },
+      });
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      await this.prisma.user.update({
+        where: { id: id },
+        data: { status: 'WARNING' },
+      });
+      return {
+        success: true,
+        message: 'User warned successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  async banUser(id: string) {
+    try {
+      if (!id) {
+        return {
+          success: false,
+          message: 'User ID is required',
+        };
+      }
+
       const user = await this.prisma.user.findUnique({
         where: { id: id },
       });
@@ -167,11 +272,11 @@ export class UserService {
       }
       await this.prisma.user.update({
         where: { id: id },
-        data: { approved_at: DateHelper.now() },
+        data: { status: 'BANNED' },
       });
       return {
         success: true,
-        message: 'User approved successfully',
+        message: 'User banned successfully',
       };
     } catch (error) {
       return {
@@ -181,34 +286,61 @@ export class UserService {
     }
   }
 
-  async reject(id: string) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: id },
-      });
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-        };
-      }
-      await this.prisma.user.update({
-        where: { id: id },
-        data: { approved_at: null },
-      });
-      return {
-        success: true,
-        message: 'User rejected successfully',
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
-  }
+  // async approve(id: string) {
+  //   try {
+  //     const user = await this.prisma.user.findUnique({
+  //       where: { id: id },
+  //     });
+  //     if (!user) {
+  //       return {
+  //         success: false,
+  //         message: 'User not found',
+  //       };
+  //     }
+  //     await this.prisma.user.update({
+  //       where: { id: id },
+  //       data: { approved_at: DateHelper.now() },
+  //     });
+  //     return {
+  //       success: true,
+  //       message: 'User approved successfully',
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  // async reject(id: string) {
+  //   try {
+  //     const user = await this.prisma.user.findUnique({
+  //       where: { id: id },
+  //     });
+  //     if (!user) {
+  //       return {
+  //         success: false,
+  //         message: 'User not found',
+  //       };
+  //     }
+  //     await this.prisma.user.update({
+  //       where: { id: id },
+  //       data: { approved_at: null },
+  //     });
+  //     return {
+  //       success: true,
+  //       message: 'User rejected successfully',
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
+
+  async updateUser(id: string, updateUserDto: UpdateUserDto) {
     try {
       const user = await UserRepository.updateUser(id, updateUserDto);
 
@@ -231,10 +363,20 @@ export class UserService {
     }
   }
 
-  async remove(id: string) {
+  async deleteUser(id: string) {
     try {
+      if (!id) {
+        return {
+          success: false,
+          message: 'User ID is required',
+        };
+      }
+
       const user = await UserRepository.deleteUser(id);
-      return user;
+      return {
+        success: user.success,
+        message: user.message,
+      };
     } catch (error) {
       return {
         success: false,
