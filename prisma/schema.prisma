@@ -32,11 +32,11 @@ model Account {
 }
 
 model User {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
+  id         String     @id @default(cuid())
+  created_at DateTime   @default(now())
+  updated_at DateTime   @default(now())
   deleted_at DateTime?
-  status     Int?      @default(1) @db.SmallInt
+  status     UserStatus @default(ACTIVE)
 
   approved_at  DateTime?
   availability String?
@@ -110,6 +110,13 @@ model User {
   saved_locations SavedLocation[]
 
   @@map("users")
+}
+
+enum UserStatus {
+  INACTIVE
+  ACTIVE
+  WARNING
+  BANNED
 }
 
 model Ucode {
@@ -356,7 +363,7 @@ model Subscription {
   type String
 
   // paystack subscription
-  paystackSubId String?
+  paystackSubId      String?
   paystackEmailToken String?
 
   // Auto-renew
@@ -550,10 +557,11 @@ model UserSetting {
 // ---------Start Shout (Social) schema---------
 
 model Shout {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
+  id         String      @id @default(cuid())
+  created_at DateTime    @default(now())
+  updated_at DateTime    @default(now())
   deleted_at DateTime?
+  status     ShoutStatus @default(PUBLISHED)
 
   content  String? @db.Text
   category String? // Idea, Observation, Thought, Gratitude, Concern, Gossip
@@ -583,6 +591,12 @@ model Shout {
   shoutReports      ShoutReport[]
 
   @@map("shouts")
+}
+
+enum ShoutStatus {
+  FLAGGED
+  PUBLISHED
+  DELETED
 }
 
 model ShoutMedia {

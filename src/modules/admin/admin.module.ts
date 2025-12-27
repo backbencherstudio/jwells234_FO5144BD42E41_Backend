@@ -5,6 +5,7 @@ import { WebsiteInfoModule } from './website-info/website-info.module';
 import { PaymentTransactionModule } from './payment-transaction/payment-transaction.module';
 import { UserModule } from './user/user.module';
 import { NotificationModule } from './notification/notification.module';
+import { ShoutManageModule } from './shout_manage/shout_manage.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { NotificationModule } from './notification/notification.module';
     PaymentTransactionModule,
     UserModule,
     NotificationModule,
+    ShoutManageModule,
   ],
 })
 export class AdminModule {}
