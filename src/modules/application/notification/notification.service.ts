@@ -1,9 +1,55 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { NotificationGateway } from './notification.gateway';
 
 @Injectable()
 export class NotificationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => NotificationGateway))
+    private notificationGateway: NotificationGateway,
+  ) {}
+
+  async createNotification(data: {
+    sender_id?: string;
+    receiver_id: string;
+    type: string;
+    text: string;
+    entity_id?: string;
+  }) {
+    const event = await this.prisma.notificationEvent.create({
+      data: {
+        type: data.type,
+        text: data.text,
+      },
+    });
+
+    const notification = await this.prisma.notification.create({
+      data: {
+        sender_id: data.sender_id,
+        receiver_id: data.receiver_id,
+        notification_event_id: event.id,
+        entity_id: data.entity_id,
+      },
+      include: {
+        notification_event: true,
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+
+    await this.notificationGateway.sendNotificationToUser(
+      data.receiver_id,
+      notification,
+    );
+
+    return notification;
+  }
 
   async getAllNotifications(userId: string) {
     try {

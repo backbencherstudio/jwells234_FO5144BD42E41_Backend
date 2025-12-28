@@ -6,6 +6,8 @@ import { PaymentTransactionModule } from './payment-transaction/payment-transact
 import { UserModule } from './user/user.module';
 import { NotificationModule } from './notification/notification.module';
 import { ShoutManageModule } from './shout_manage/shout_manage.module';
+import { ReportsModule } from './reports/reports.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { ShoutManageModule } from './shout_manage/shout_manage.module';
     UserModule,
     NotificationModule,
     ShoutManageModule,
+    ReportsModule,
+    DashboardModule,
   ],
 })
 export class AdminModule {}

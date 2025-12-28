@@ -384,4 +384,50 @@ export class UserService {
       };
     }
   }
+
+  async getProfile(userId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+          username: true,
+          email: true,
+          phone_number: true,
+          address: true,
+          type: true,
+          status: true,
+          approved_at: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      // add avatar url to user
+      if (user.avatar) {
+        user['avatar_url'] = SazedStorage.url(
+          appConfig().storageUrl.avatar + user.avatar,
+        );
+      }
+
+      return {
+        success: true,
+        data: user,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
 }

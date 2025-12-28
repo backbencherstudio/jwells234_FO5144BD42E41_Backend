@@ -651,6 +651,7 @@ model ShoutComment {
 model ShoutReport {
   id         String       @id @default(cuid())
   created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
   status     ReportStatus @default(PENDING)
 
   user_id String
@@ -668,6 +669,7 @@ model ShoutReport {
 model UserReport {
   id         String       @id @default(cuid())
   created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
   status     ReportStatus @default(PENDING)
 
   reporter_id String
@@ -703,22 +705,7 @@ enum ReportStatus {
   PENDING
   REVIEWED
   RESOLVED
+  HIGH_SEVERITY
 }
 
 // ---------End Shout (Social) schema---------
-
-// this table stores example
-// model Note {
-//   id                String  @id @default(cuid())
-//   created_at DateTime  @default(now())
-//   updated_at DateTime  @default(now())
-//   deleted_at DateTime?
-//   status     Int?      @default(1) @db.SmallInt
-
-//   title String?
-//   body  String? @db.Text
-
-//   tenant_id Int?
-//   tenant    Organization? @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
-//   @@map("posts")
-// }

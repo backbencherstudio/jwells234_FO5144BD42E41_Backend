@@ -6,10 +6,14 @@ import appConfig from '../../config/app.config';
 import { SubscriptionPlan } from '@prisma/client';
 import { CreateProductAndPriceDto } from './dto/createProductAndPrice.dto';
 import { ChargeCardDto, SubmitOtpDto } from './dto/ChargeCardDto.dto';
+import { NotificationService } from '../application/notification/notification.service';
 
 @Injectable()
 export class SubscriptionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
   async startTrial(user: any, planId: string) {
     // Check if user has ever used a trial
@@ -455,15 +459,47 @@ export class SubscriptionService {
     if (existingSub) {
       await this.prisma.subscription.update({
         where: { id: existingSub.id },
-        data: subData,
+        data: {
+          ...subData,
+          users: { connect: { id: userId } }, // Ensure user relation is connected
+        },
       });
     } else {
       await this.prisma.subscription.create({
         data: {
           ...subData,
           createdAt: new Date(),
+          users: { connect: { id: userId } }, // Ensure user relation is connected
         },
       });
+    }
+
+    // Record Payment Transaction
+    try {
+      await this.prisma.paymentTransaction.create({
+        data: {
+          user_id: userId,
+          amount: transaction.amount ? transaction.amount / 100 : 0,
+          currency: transaction.currency || 'NGN',
+          paid_amount: transaction.amount ? transaction.amount / 100 : 0,
+          paid_currency: transaction.currency || 'NGN',
+          reference_number: transaction.reference,
+          status: transaction.status || 'success',
+          provider: 'paystack',
+          type: 'subscription',
+          raw_status: JSON.stringify(transaction),
+        },
+      });
+
+      // Send Notification
+      await this.notificationService.createNotification({
+        receiver_id: userId,
+        type: 'SUBSCRIPTION_ACTIVATED',
+        text: `Your subscription to ${plan.name} has been activated successfully.`,
+        entity_id: plan.id,
+      });
+    } catch (error) {
+      console.error('Failed to record payment transaction or send notification:', error);
     }
   }
 
@@ -534,7 +570,13 @@ export class SubscriptionService {
           cancelAtPeriodEnd: true,
         },
       });
-
+      // Send Notification
+      await this.notificationService.createNotification({
+        receiver_id: userId,
+        type: 'SUBSCRIPTION_CANCELLED',
+        text: 'Your subscription has been cancelled.',
+        entity_id: subscription.planId,
+      });
       return {
         success: true,
         message: 'Subscription canceled successfully',
@@ -628,6 +670,34 @@ export class SubscriptionService {
           status: 'active',
         },
       });
+
+      // Record Payment Transaction for Renewal
+      try {
+        await this.prisma.paymentTransaction.create({
+          data: {
+            user_id: user.id,
+            amount: data.amount ? data.amount / 100 : 0,
+            currency: data.currency || 'NGN',
+            paid_amount: data.amount ? data.amount / 100 : 0,
+            paid_currency: data.currency || 'NGN',
+            reference_number: data.reference,
+            status: data.status || 'success',
+            provider: 'paystack',
+            type: 'subscription_renewal',
+            raw_status: JSON.stringify(data),
+          },
+        });
+
+        // Send Notification
+        await this.notificationService.createNotification({
+          receiver_id: user.id,
+          type: 'SUBSCRIPTION_RENEWED',
+          text: `Your subscription has been renewed successfully.`,
+          entity_id: sub.planId,
+        });
+      } catch (error) {
+        console.error('Failed to record renewal transaction or send notification:', error);
+      }
     }
   }
 

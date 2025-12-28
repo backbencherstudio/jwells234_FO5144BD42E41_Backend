@@ -3,11 +3,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SaveLocationDto } from './dto/save-location.dto';
 import appConfig from '../../config/app.config';
 import axios from 'axios';
-import { NotificationRepository } from '../../common/repository/notification/notification.repository';
+import { NotificationService } from '../application/notification/notification.service';
 
 @Injectable()
 export class MapExploreService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
   async searchPlaces(query: string) {
     const apiKey = appConfig().app.googleMapsApiKey;
@@ -123,7 +126,7 @@ export class MapExploreService {
 
       // Create a notification for the user
       try {
-        await NotificationRepository.createNotification({
+        await this.notificationService.createNotification({
           sender_id: userId,
           receiver_id: userId,
           text: `You have successfully saved the location: ${savedLocation.name}`,

@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { NotificationService } from '../../application/notification/notification.service';
 
 import { UpdateStatusDto } from './dto/update-status.dto';
 
 @Injectable()
 export class ShoutManageService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
   async getAllShouts() {
     try {
@@ -309,6 +313,14 @@ export class ShoutManageService {
       const updatedShout = await this.prisma.shout.update({
         where: { id },
         data: { status: body.status },
+      });
+
+      // Send Notification
+      await this.notificationService.createNotification({
+        receiver_id: updatedShout.user_id,
+        type: 'SHOUT_STATUS_UPDATE',
+        text: `Your shout status has been updated to ${body.status}.`,
+        entity_id: updatedShout.id,
       });
 
       return {

@@ -22,6 +22,7 @@ import { Role } from '../../../common/guard/role/role.enum';
 import { Roles } from '../../../common/guard/role/roles.decorator';
 import { RolesGuard } from '../../../common/guard/role/roles.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { GetUser } from 'src/modules/auth/decorators/get-user.decorator';
 
 @ApiBearerAuth()
 @ApiTags('User')
@@ -141,7 +142,10 @@ export class UserController {
 
   @ApiResponse({ description: 'Update a user by id' })
   @Patch(':id')
-  async updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  async updateUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
     try {
       const user = await this.userService.updateUser(id, updateUserDto);
       return user;
@@ -159,6 +163,21 @@ export class UserController {
     try {
       const user = await this.userService.deleteUser(id);
       return user;
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @ApiResponse({ description: 'Get my profile info' })
+  @Get('profile/me')
+  async getProfile(@GetUser() user: any) {
+    try {
+      console.log('User from token:', user);
+      const profile = await this.userService.getProfile(user.userId);
+      return profile;
     } catch (error) {
       return {
         success: false,
