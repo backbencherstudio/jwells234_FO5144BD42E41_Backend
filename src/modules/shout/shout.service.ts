@@ -5,11 +5,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SazedStorage } from '../../common/lib/Disk/SazedStorage';
 import { StringHelper } from '../../common/helper/string.helper';
 import { CreateCommentDto } from './dto/create-comment.dto';
-import { NotificationRepository } from '../../common/repository/notification/notification.repository';
+import { NotificationService } from '../application/notification/notification.service';
 
 @Injectable()
 export class ShoutService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
    private transformShout(shout: any, userId: string) {
     const isLiked = shout.likes && shout.likes.length > 0;
@@ -349,7 +352,7 @@ export class ShoutService {
           });
           const likerName = liker?.name || liker?.username || 'Someone';
 
-          await NotificationRepository.createNotification({
+          await this.notificationService.createNotification({
             sender_id: userId,
             receiver_id: shout.user_id,
             text: `${likerName} liked your shout`,
@@ -425,7 +428,7 @@ export class ShoutService {
           });
 
           if (parentComment && parentComment.user_id !== userId) {
-            await NotificationRepository.createNotification({
+            await this.notificationService.createNotification({
               sender_id: userId,
               receiver_id: parentComment.user_id,
               text: `${commenterName} replied to your comment`,
@@ -441,7 +444,7 @@ export class ShoutService {
           });
 
           if (shout && shout.user_id !== userId) {
-            await NotificationRepository.createNotification({
+            await this.notificationService.createNotification({
               sender_id: userId,
               receiver_id: shout.user_id,
               text: `${commenterName} commented on your shout`,
@@ -536,7 +539,7 @@ export class ShoutService {
           });
           const sharerName = sharer?.name || sharer?.username || 'Someone';
 
-          await NotificationRepository.createNotification({
+          await this.notificationService.createNotification({
             sender_id: userId,
             receiver_id: originalShout.user_id,
             text: `${sharerName} shared your shout`,

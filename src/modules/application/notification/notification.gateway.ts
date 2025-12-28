@@ -8,7 +8,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { OnModuleInit } from '@nestjs/common';
+import { OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import Redis from 'ioredis';
 import { NotificationService } from './notification.service';
 import appConfig from '../../../config/app.config';
@@ -34,7 +34,10 @@ export class NotificationGateway
   // Map to store connected clients (UserId -> Set of SocketIds)
   private clients = new Map<string, Set<string>>();
 
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    @Inject(forwardRef(() => NotificationService))
+    private readonly notificationService: NotificationService,
+  ) {}
 
   onModuleInit() {
     this.redisPubClient = new Redis({
@@ -120,5 +123,14 @@ export class NotificationGateway
     } else {
       // console.log(`User ${data.userId} not connected`);
     }
+  }
+
+  async sendNotificationToUser(userId: string, data: any) {
+    // Publish to Redis so that all instances (if scaled) can pick it up
+    // The redisSubClient listener above handles the actual emitting to the socket
+    await this.redisPubClient.publish(
+      'notification',
+      JSON.stringify({ ...data, receiver_id: userId }),
+    );
   }
 }
