@@ -53,6 +53,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to fetch user details',
       };
     }
@@ -130,6 +131,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -226,6 +228,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -316,8 +319,7 @@ export class AuthController {
       return response;
     } catch (error) {
       return {
-        success: false,
-        message: 'Failed to update user',
+        success: false,        statusCode: 500,        message: 'Failed to update user',
       };
     }
   }
@@ -336,6 +338,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Something went wrong',
       };
     }
@@ -361,6 +364,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to verify email',
       };
     }
@@ -379,6 +383,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to resend verification email',
       };
     }
@@ -414,6 +419,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Something went wrong',
       };
     }
@@ -458,6 +464,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to change password',
       };
     }
@@ -484,6 +491,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Something went wrong',
       };
     }
@@ -516,6 +524,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Something went wrong',
       };
     }
@@ -534,6 +543,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -551,6 +561,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -567,6 +578,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -583,6 +595,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -600,6 +613,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -616,6 +630,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -632,6 +647,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -680,6 +696,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -719,6 +736,7 @@ export class AuthController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }

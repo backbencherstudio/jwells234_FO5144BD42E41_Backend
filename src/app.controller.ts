@@ -24,7 +24,8 @@ export class AppController {
   @Get('/')
   root() {
     return {
-      ok: true,
+      success: true,
+      statusCode: 200,
       message: 'Server is running',
       appName: process.env.APP_NAME || 'Application',
       version: process.env.npm_package_version || '1.0.0',
@@ -36,7 +37,8 @@ export class AppController {
   @Get('')
   getApiStatus() {
     return {
-      ok: true,
+      success: true,
+      statusCode: 200,
       message: 'Server is running',
       appName: process.env.APP_NAME || 'Application',
       version: process.env.npm_package_version || '1.0.0',
@@ -92,6 +94,7 @@ export class AppController {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }

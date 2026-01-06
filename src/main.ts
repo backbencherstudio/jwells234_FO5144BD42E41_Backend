@@ -129,6 +129,8 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
     }),
   );
   app.useGlobalFilters(new CustomExceptionFilter());

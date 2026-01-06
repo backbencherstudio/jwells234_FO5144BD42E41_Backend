@@ -5,6 +5,7 @@ export class CustomForbiddenException extends HttpException {
     super(
       {
         success: false,
+        statusCode: HttpStatus.FORBIDDEN,
         message: message || 'Forbidden access',
       },
       HttpStatus.FORBIDDEN,
