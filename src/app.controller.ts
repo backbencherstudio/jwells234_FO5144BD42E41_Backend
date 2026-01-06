@@ -87,11 +87,18 @@ export class AppController {
   @UseInterceptors(
     FileInterceptor('image', { storage: multer.memoryStorage() as any }),
   )
-  async test(@UploadedFile() image?: Express.Multer.File) {
+  async test(
+    @UploadedFile() image: Express.Multer.File,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
       const result = await this.appService.test(image);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
       return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,

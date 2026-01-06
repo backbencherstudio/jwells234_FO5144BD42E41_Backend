@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { SubscriptionService } from './subscription.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -27,10 +28,19 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'Start Trial Subscription' })
   @Post('start-trial')
-  async startTrial(@GetUser() user, @Body('planId') planId: string) {
+  async startTrial(
+    @GetUser() user,
+    @Body('planId') planId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.subscriptionService.startTrial(user, planId);
+      const result = await this.subscriptionService.startTrial(user, planId);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -41,10 +51,18 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'create product & price' })
   @Post('create-plan-price')
-  async createPlanAndPrice(@Body() dto: CreateProductAndPriceDto) {
+  async createPlanAndPrice(
+    @Body() dto: CreateProductAndPriceDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.subscriptionService.createPlanAndPrice(dto);
+      const result = await this.subscriptionService.createPlanAndPrice(dto);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -55,10 +73,19 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'Charge Card Directly (Custom Checkout)' })
   @Post('payment/charge')
-  async chargeCard(@GetUser() user, @Body() dto: ChargeCardDto) {
+  async chargeCard(
+    @GetUser() user,
+    @Body() dto: ChargeCardDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.subscriptionService.chargeCard(user, dto);
+      const result = await this.subscriptionService.chargeCard(user, dto);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -69,10 +96,18 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'Submit OTP for Charge' })
   @Post('payment/otp')
-  async submitOtp(@Body() dto: SubmitOtpDto) {
+  async submitOtp(
+    @Body() dto: SubmitOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.subscriptionService.submitOtp(dto);
+      const result = await this.subscriptionService.submitOtp(dto);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -83,10 +118,20 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'Get User Subscription Status' })
   @Get('status')
-  async getSubscriptionStatus(@GetUser() user) {
+  async getSubscriptionStatus(
+    @GetUser() user,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.subscriptionService.getSubscriptionStatus(user.userId);
+      const result = await this.subscriptionService.getSubscriptionStatus(
+        user.userId,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -97,10 +142,15 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'get all plans' })
   @Get('plans')
-  async getAllPlans() {
+  async getAllPlans(@Res({ passthrough: true }) res: Response) {
     try {
-      return await this.subscriptionService.getAllPlans();
+      const result = await this.subscriptionService.getAllPlans();
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -111,10 +161,18 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'Cancel Subscription' })
   @Post('cancel')
-  async cancelSubscription(@GetUser('userId') userId: string) {
+  async cancelSubscription(
+    @GetUser('userId') userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.subscriptionService.cancelSubscription(userId);
+      const result = await this.subscriptionService.cancelSubscription(userId);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,

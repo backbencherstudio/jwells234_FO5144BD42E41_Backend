@@ -11,7 +11,9 @@ import {
   UseInterceptors,
   UploadedFiles,
   Query,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ShoutService } from './shout.service';
 import { CreateShoutDto } from './dto/create-shout.dto';
 import { UpdateShoutDto } from './dto/update-shout.dto';
@@ -48,17 +50,23 @@ export class ShoutController {
     @Body() createShoutDto: CreateShoutDto,
     @UploadedFiles()
     files: { images?: Express.Multer.File[]; audio?: Express.Multer.File[] },
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
       const images = files?.images;
       const audio = files?.audio ? files.audio[0] : null;
-      return await this.shoutService.createPost(
+      const result = await this.shoutService.createPost(
         user.userId,
         createShoutDto,
         images,
         audio,
       );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -73,10 +81,20 @@ export class ShoutController {
     @GetUser() user,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      return await this.shoutService.getAllPosts(user.userId, +page, +limit);
+      const result = await this.shoutService.getAllPosts(
+        user.userId,
+        +page,
+        +limit,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -92,15 +110,21 @@ export class ShoutController {
     @Param('userId') userId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      return await this.shoutService.getUserProfileAndPosts(
+      const result = await this.shoutService.getUserProfileAndPosts(
         userId,
         user.userId,
         +page,
         +limit,
       );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -111,10 +135,19 @@ export class ShoutController {
 
   @ApiOperation({ summary: 'Get a shout by ID' })
   @Get(':id')
-  async getPostById(@GetUser() user, @Param('id') id: string) {
+  async getPostById(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.shoutService.getPostById(id, user.userId);
+      const result = await this.shoutService.getPostById(id, user.userId);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -129,10 +162,20 @@ export class ShoutController {
     @GetUser() user,
     @Param('id') id: string,
     @Body() updateShoutDto: UpdateShoutDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      return await this.shoutService.updatePost(id, user.userId, updateShoutDto);
+      const result = await this.shoutService.updatePost(
+        id,
+        user.userId,
+        updateShoutDto,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -143,10 +186,19 @@ export class ShoutController {
 
   @ApiOperation({ summary: 'Delete a shout by ID' })
   @Delete(':id')
-  async deletePost(@GetUser() user, @Param('id') id: string) {
+  async deletePost(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.shoutService.deletePost(id, user.userId);
+      const result = await this.shoutService.deletePost(id, user.userId);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -157,10 +209,19 @@ export class ShoutController {
 
   @ApiOperation({ summary: 'Like a shout' })
   @Post(':id/like')
-  async like(@GetUser() user, @Param('id') id: string) {
+  async like(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.shoutService.like(id, user.userId);
+      const result = await this.shoutService.like(id, user.userId);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -171,10 +232,19 @@ export class ShoutController {
 
   @ApiOperation({ summary: 'Unlike a shout' })
   @Delete(':id/like')
-  async unlike(@GetUser() user, @Param('id') id: string) {
+  async unlike(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.shoutService.unlike(id, user.userId);
+      const result = await this.shoutService.unlike(id, user.userId);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -189,10 +259,20 @@ export class ShoutController {
     @GetUser() user,
     @Param('id') id: string,
     @Body() createCommentDto: CreateCommentDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      return await this.shoutService.comment(id, user.userId, createCommentDto);
+      const result = await this.shoutService.comment(
+        id,
+        user.userId,
+        createCommentDto,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -208,10 +288,16 @@ export class ShoutController {
     @Param('id') id: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      return await this.shoutService.getComments(id, +page, +limit);
+      const result = await this.shoutService.getComments(id, +page, +limit);
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -226,10 +312,20 @@ export class ShoutController {
     @Req() req,
     @Param('id') id: string,
     @Body() createShoutDto: CreateShoutDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      return await this.shoutService.share(id, req.user.userId, createShoutDto);
+      const result = await this.shoutService.share(
+        id,
+        req.user.userId,
+        createShoutDto,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
@@ -240,10 +336,24 @@ export class ShoutController {
 
   @ApiOperation({ summary: 'report a shout' })
   @Post(':id/report')
-  async report(@GetUser() user, @Param('id') id: string, @Body() body) {
+  async report(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Body() body,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      return await this.shoutService.report(id, user.userId, body.reason);
+      const result = await this.shoutService.report(
+        id,
+        user.userId,
+        body.reason,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
         statusCode: 500,
