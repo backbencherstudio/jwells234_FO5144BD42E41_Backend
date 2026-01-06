@@ -25,7 +25,11 @@ export class SubscriptionService {
     });
 
     if (trialUsed) {
-      throw new BadRequestException('User has already used the trial period');
+      return {
+        success: false,
+        statusCode: 400,
+        message: 'User has already used the trial period',
+      };
     }
 
     // Check for active subscription (prevent overlapping active subscriptions if needed)
@@ -40,7 +44,11 @@ export class SubscriptionService {
       activeSubscription &&
       activeSubscription.type !== SubscriptionPlan.FREE
     ) {
-      throw new BadRequestException('User already has an active subscription');
+      return {
+        success: false,
+        statusCode: 400,
+        message: 'User already has an active subscription',
+      };
     }
 
     const plan = await this.prisma.subsPlan.findFirst({
@@ -51,7 +59,11 @@ export class SubscriptionService {
     });
 
     if (!plan) {
-      throw new BadRequestException('Plan not found');
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Plan not found',
+      };
     }
 
     const trialDays = plan.trialDays || appConfig().subscription.trial_days;
@@ -102,6 +114,7 @@ export class SubscriptionService {
 
     return {
       success: true,
+      statusCode: 200,
       message: `Trial started for ${trialDays} days`,
       data: {
         startDate: startDate,
@@ -134,6 +147,7 @@ export class SubscriptionService {
     if (!subscription) {
       return {
         success: false,
+        statusCode: 200,
         plan: SubscriptionPlan.FREE,
         status: 'inactive',
       };
@@ -187,6 +201,7 @@ export class SubscriptionService {
 
     return {
       success: true,
+      statusCode: 200,
       subscription: subscription,
       paystackDetails: paystackStatus, // Include raw Paystack data
     };
@@ -243,7 +258,12 @@ export class SubscriptionService {
       },
     });
 
-    return productRecord;
+    return {
+      success: true,
+      statusCode: 201,
+      message: 'Plan created successfully',
+      data: productRecord,
+    };
   }
 
   async chargeCard(user: any, dto: ChargeCardDto) {
@@ -252,7 +272,11 @@ export class SubscriptionService {
     });
 
     if (!dbUser) {
-      throw new BadRequestException('User not found');
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'User not found',
+      };
     }
 
     // Check if user already has an active subscription
@@ -267,9 +291,12 @@ export class SubscriptionService {
       // Check if it is expired just in case the status wasn't updated
       const now = new Date();
       if (activeSubscription.endDate && now < activeSubscription.endDate) {
-        throw new BadRequestException(
-          'User already has an active subscription. Please cancel it before subscribing to a new plan.',
-        );
+        return {
+          success: false,
+          statusCode: 409,
+          message:
+            'User already has an active subscription. Please cancel it before subscribing to a new plan.',
+        };
       }
     }
 
@@ -278,7 +305,11 @@ export class SubscriptionService {
     });
 
     if (!plan) {
-      throw new BadRequestException('Plan not found');
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Plan not found',
+      };
     }
 
     // Charge the card
@@ -305,6 +336,7 @@ export class SubscriptionService {
 
     return {
       success: true,
+      statusCode: 200,
       message: charge.status,
       data: charge,
       reference: charge.reference,
@@ -345,6 +377,7 @@ export class SubscriptionService {
 
     return {
       success: true,
+      statusCode: 200,
       message: result.status,
       data: result,
     };
@@ -509,6 +542,7 @@ export class SubscriptionService {
     });
     return {
       success: true,
+      statusCode: 200,
       plans: plans,
     };
   }
@@ -522,7 +556,11 @@ export class SubscriptionService {
     });
 
     if (!subscription) {
-      throw new BadRequestException('No active subscription found');
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'No active subscription found',
+      };
     }
 
     try {
@@ -579,12 +617,15 @@ export class SubscriptionService {
       });
       return {
         success: true,
+        statusCode: 200,
         message: 'Subscription canceled successfully',
       };
     } catch (error) {
-      throw new BadRequestException(
-        'Failed to cancel subscription: ' + error.message,
-      );
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to cancel subscription: ' + error.message,
+      };
     }
   }
 

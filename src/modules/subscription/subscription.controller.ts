@@ -27,43 +27,99 @@ export class SubscriptionController {
 
   @ApiOperation({ summary: 'Start Trial Subscription' })
   @Post('start-trial')
-  startTrial(@GetUser() user, @Body('planId') planId: string) {
-    return this.subscriptionService.startTrial(user, planId);
+  async startTrial(@GetUser() user, @Body('planId') planId: string) {
+    try {
+      return await this.subscriptionService.startTrial(user, planId);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to start trial',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'create product & price' })
   @Post('create-plan-price')
-  createPlanAndPrice(@Body() dto: CreateProductAndPriceDto) {
-    return this.subscriptionService.createPlanAndPrice(dto);
+  async createPlanAndPrice(@Body() dto: CreateProductAndPriceDto) {
+    try {
+      return await this.subscriptionService.createPlanAndPrice(dto);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to create plan and price',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Charge Card Directly (Custom Checkout)' })
   @Post('payment/charge')
-  chargeCard(@GetUser() user, @Body() dto: ChargeCardDto) {
-    return this.subscriptionService.chargeCard(user, dto);
+  async chargeCard(@GetUser() user, @Body() dto: ChargeCardDto) {
+    try {
+      return await this.subscriptionService.chargeCard(user, dto);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to charge card',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Submit OTP for Charge' })
   @Post('payment/otp')
-  submitOtp(@Body() dto: SubmitOtpDto) {
-    return this.subscriptionService.submitOtp(dto);
+  async submitOtp(@Body() dto: SubmitOtpDto) {
+    try {
+      return await this.subscriptionService.submitOtp(dto);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to submit OTP',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Get User Subscription Status' })
   @Get('status')
-  getSubscriptionStatus(@GetUser() user) {
-    return this.subscriptionService.getSubscriptionStatus(user.userId);
+  async getSubscriptionStatus(@GetUser() user) {
+    try {
+      return await this.subscriptionService.getSubscriptionStatus(user.userId);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to get subscription status',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'get all plans' })
   @Get('plans')
-  getAllPlans() {
-    return this.subscriptionService.getAllPlans();
+  async getAllPlans() {
+    try {
+      return await this.subscriptionService.getAllPlans();
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to get plans',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Cancel Subscription' })
   @Post('cancel')
-  cancelSubscription(@GetUser('userId') userId: string) {
-    return this.subscriptionService.cancelSubscription(userId);
+  async cancelSubscription(@GetUser('userId') userId: string) {
+    try {
+      return await this.subscriptionService.cancelSubscription(userId);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to cancel subscription',
+      };
+    }
   }
 }

@@ -7,9 +7,6 @@ export class LocationService {
     
     if (!apiKey) {
       console.warn('Google Maps API Key is missing.');
-      // If strict mode is required, return false. 
-      // However, without a key, we can't verify. 
-      // Returning false ensures security but might block valid users if config is missing.
       return false; 
     }
 

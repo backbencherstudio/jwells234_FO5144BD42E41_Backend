@@ -43,116 +43,212 @@ export class ShoutController {
       { name: 'audio', maxCount: 1 },
     ]),
   )
-  createPost(
+  async createPost(
     @GetUser() user,
     @Body() createShoutDto: CreateShoutDto,
     @UploadedFiles()
     files: { images?: Express.Multer.File[]; audio?: Express.Multer.File[] },
   ) {
-    const images = files?.images;
-    const audio = files?.audio ? files.audio[0] : null;
-    return this.shoutService.createPost(
-      user.userId,
-      createShoutDto,
-      images,
-      audio,
-    );
+    try {
+      const images = files?.images;
+      const audio = files?.audio ? files.audio[0] : null;
+      return await this.shoutService.createPost(
+        user.userId,
+        createShoutDto,
+        images,
+        audio,
+      );
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to create shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Get all shouts with pagination' })
   @Get()
-  getAllPosts(
+  async getAllPosts(
     @GetUser() user,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
   ) {
-    return this.shoutService.getAllPosts(user.userId, +page, +limit);
+    try {
+      return await this.shoutService.getAllPosts(user.userId, +page, +limit);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to fetch shouts',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Get profile and shouts of a specific user' })
   @Get('user/:userId')
-  getUserProfileAndPosts(
+  async getUserProfileAndPosts(
     @GetUser() user,
     @Param('userId') userId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
   ) {
-    return this.shoutService.getUserProfileAndPosts(
-      userId,
-      user.userId,
-      +page,
-      +limit,
-    );
+    try {
+      return await this.shoutService.getUserProfileAndPosts(
+        userId,
+        user.userId,
+        +page,
+        +limit,
+      );
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to fetch user profile and posts',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Get a shout by ID' })
   @Get(':id')
-  getPostById(@GetUser() user, @Param('id') id: string) {
-    return this.shoutService.getPostById(id, user.userId);
+  async getPostById(@GetUser() user, @Param('id') id: string) {
+    try {
+      return await this.shoutService.getPostById(id, user.userId);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to fetch shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Update a shout by ID' })
   @Patch(':id')
-  updatePost(
+  async updatePost(
     @GetUser() user,
     @Param('id') id: string,
     @Body() updateShoutDto: UpdateShoutDto,
   ) {
-    return this.shoutService.updatePost(id, user.userId, updateShoutDto);
+    try {
+      return await this.shoutService.updatePost(id, user.userId, updateShoutDto);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to update shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Delete a shout by ID' })
   @Delete(':id')
-  deletePost(@GetUser() user, @Param('id') id: string) {
-    return this.shoutService.deletePost(id, user.userId);
+  async deletePost(@GetUser() user, @Param('id') id: string) {
+    try {
+      return await this.shoutService.deletePost(id, user.userId);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to delete shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Like a shout' })
   @Post(':id/like')
-  like(@GetUser() user, @Param('id') id: string) {
-    return this.shoutService.like(id, user.userId);
+  async like(@GetUser() user, @Param('id') id: string) {
+    try {
+      return await this.shoutService.like(id, user.userId);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to like shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Unlike a shout' })
   @Delete(':id/like')
-  unlike(@GetUser() user, @Param('id') id: string) {
-    return this.shoutService.unlike(id, user.userId);
+  async unlike(@GetUser() user, @Param('id') id: string) {
+    try {
+      return await this.shoutService.unlike(id, user.userId);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to unlike shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Comment on a shout' })
   @Post(':id/comment')
-  comment(
+  async comment(
     @GetUser() user,
     @Param('id') id: string,
     @Body() createCommentDto: CreateCommentDto,
   ) {
-    return this.shoutService.comment(id, user.userId, createCommentDto);
+    try {
+      return await this.shoutService.comment(id, user.userId, createCommentDto);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to comment on shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Get comments for a shout' })
   @Get(':id/comment')
-  getComments(
+  async getComments(
     @GetUser() user,
     @Param('id') id: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
   ) {
-    return this.shoutService.getComments(id, +page, +limit);
+    try {
+      return await this.shoutService.getComments(id, +page, +limit);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to fetch comments',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Share a shout' })
   @Post(':id/share')
-  share(
+  async share(
     @Req() req,
     @Param('id') id: string,
     @Body() createShoutDto: CreateShoutDto,
   ) {
-    return this.shoutService.share(id, req.user.userId, createShoutDto);
+    try {
+      return await this.shoutService.share(id, req.user.userId, createShoutDto);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to share shout',
+      };
+    }
   }
 
   @ApiOperation({ summary: 'report a shout' })
   @Post(':id/report')
-  report(@GetUser() user, @Param('id') id: string, @Body() body) {
-    return this.shoutService.report(id, user.userId, body.reason);
+  async report(@GetUser() user, @Param('id') id: string, @Body() body) {
+    try {
+      return await this.shoutService.report(id, user.userId, body.reason);
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to report shout',
+      };
+    }
   }
 }

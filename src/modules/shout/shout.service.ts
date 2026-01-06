@@ -122,6 +122,7 @@ export class ShoutService {
 
     return {
       success: true,
+      statusCode: 201,
       message: 'Shout created successfully',
       shout: createdShout,
     };
@@ -163,6 +164,7 @@ export class ShoutService {
 
     return {
       success: true,
+      statusCode: 200,
       data: transformedShouts,
     };
   }
@@ -174,7 +176,11 @@ export class ShoutService {
     limit = 10,
   ) {
     if (!targetUserId) {
-      throw new NotFoundException('User ID is required');
+      return {
+        success: false,
+        statusCode: 400,
+        message: 'User ID is required',
+      };
     }
 
     const user = await this.prisma.user.findUnique({
@@ -192,7 +198,11 @@ export class ShoutService {
       },
     });
     if (!user) {
-      throw new NotFoundException('User not found');
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'User not found',
+      };
     }
 
     const skip = (page - 1) * limit;
@@ -242,6 +252,7 @@ export class ShoutService {
 
     return {
       success: true,
+      statusCode: 200,
       data: {
         profile: user,
         posts: transformedShouts,
@@ -277,13 +288,18 @@ export class ShoutService {
     });
 
     if (!shout) {
-      throw new NotFoundException('Shout not found');
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Shout not found',
+      };
     }
 
     const transformedShout = this.transformShout(shout, userId);
 
     return {
       success: true,
+      statusCode: 200,
       data: transformedShout,
     };
   }
@@ -293,7 +309,11 @@ export class ShoutService {
       const shout = await this.prisma.shout.findUnique({ where: { id } });
 
       if (!shout || shout.user_id !== userId) {
-        throw new NotFoundException('Shout not found or unauthorized');
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Shout not found or unauthorized',
+        };
       }
 
       await this.prisma.shout.update({
@@ -305,12 +325,17 @@ export class ShoutService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Shout updated successfully',
         data: updatedShout,
       };
     } catch (error) {
       console.error('Error updating shout:', error);
-      throw new NotFoundException('Failed to update shout');
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to update shout',
+      };
     }
   }
 
@@ -318,13 +343,18 @@ export class ShoutService {
     const shout = await this.prisma.shout.findUnique({ where: { id } });
 
     if (!shout || shout.user_id !== userId) {
-      throw new NotFoundException('Shout not found or unauthorized');
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Shout not found or unauthorized',
+      };
     }
 
     await this.prisma.shout.delete({ where: { id } });
 
     return {
       success: true,
+      statusCode: 200,
       message: 'Shout deleted',
     };
   }
@@ -366,12 +396,14 @@ export class ShoutService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Shout liked',
       };
     } catch (error) {
       // Likely already liked
       return {
         success: false,
+        statusCode: 409,
         message: 'Already liked',
       };
     }
@@ -386,6 +418,7 @@ export class ShoutService {
     });
     return {
       success: true,
+      statusCode: 200,
       message: 'Shout unliked',
     };
   }
@@ -459,12 +492,14 @@ export class ShoutService {
 
       return {
         success: true,
+        statusCode: 201,
         message: 'Comment added',
         data: comment,
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to add comment',
       };
     }
@@ -504,12 +539,14 @@ export class ShoutService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Comments fetched',
         data: comments,
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to fetch comments',
       };
     }
@@ -518,7 +555,13 @@ export class ShoutService {
   async share(id: string, userId: string, createShoutDto: CreateShoutDto) {
     // Sharing creates a new shout referencing the original
     const originalShout = await this.prisma.shout.findUnique({ where: { id } });
-    if (!originalShout) throw new NotFoundException('Original shout not found');
+    if (!originalShout) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Original shout not found',
+      };
+    }
 
     try {
       const shout = await this.prisma.shout.create({
@@ -554,12 +597,14 @@ export class ShoutService {
       const result = await this.getPostById(shout.id, userId);
       return {
         success: true,
+        statusCode: 201,
         message: 'Shout shared successfully',
         shout: result,
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to share shout',
       };
     }
@@ -573,6 +618,7 @@ export class ShoutService {
       if (!existingShout) {
         return {
           success: false,
+          statusCode: 404,
           message: 'Shout not found',
         };
       }
@@ -580,6 +626,7 @@ export class ShoutService {
       if (existingShout.user_id === userId) {
         return {
           success: false,
+          statusCode: 400,
           message: 'You cannot report your own shout',
         };
       }
@@ -593,6 +640,7 @@ export class ShoutService {
       if (existingReport) {
         return {
           success: false,
+          statusCode: 409,
           message: 'You have already reported this shout',
         };
       }
@@ -606,11 +654,13 @@ export class ShoutService {
       });
       return {
         success: true,
+        statusCode: 201,
         message: 'Shout reported',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to report shout',
       };
     }

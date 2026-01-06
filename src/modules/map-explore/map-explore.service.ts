@@ -41,12 +41,14 @@ export class MapExploreService {
       if (!response.data.places) {
         return {
           success: true,
+          statusCode: 200,
           data: [],
         };
       }
 
       return {
         success: true,
+        statusCode: 200,
         data: response.data.places.map((place) => ({
           name: place.displayName?.text,
           address: place.formattedAddress,
@@ -66,6 +68,7 @@ export class MapExploreService {
       }
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to search places',
       };
     }
@@ -113,6 +116,7 @@ export class MapExploreService {
       if (existingLocation) {
         return {
           success: false,
+          statusCode: 409,
           message: 'Location already saved',
         };
       }
@@ -140,6 +144,7 @@ export class MapExploreService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Location saved successfully',
         data: savedLocation,
       };
@@ -147,6 +152,7 @@ export class MapExploreService {
       console.error('Error saving location:', error);
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to save location',
       };
     }
@@ -172,11 +178,13 @@ export class MapExploreService {
 
       return {
         success: true,
+        statusCode: 200,
         data: locations,
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to fetch saved locations',
       };
     }
@@ -209,11 +217,13 @@ export class MapExploreService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Location deleted successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message || 'Failed to delete location',
       };
     }

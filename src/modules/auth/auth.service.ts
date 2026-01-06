@@ -71,7 +71,8 @@ export class AuthService {
 
       if (userEmailExist) {
         return {
-          statusCode: 401,
+          success: false,
+          statusCode: 409,
           message: 'Email already exist',
         };
       }
@@ -117,6 +118,7 @@ export class AuthService {
       if (!user || !user.success) {
         return {
           success: false,
+          statusCode: 400,
           message: user?.message || 'Failed to create account',
         };
       }
@@ -155,6 +157,7 @@ export class AuthService {
 
       return {
         success: true,
+        statusCode: 201,
         message: 'We have sent an OTP code to your email',
       };
 
@@ -176,11 +179,13 @@ export class AuthService {
 
       return {
         success: true,
+        statusCode: 201,
         message: 'Account created successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -221,23 +226,27 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          statusCode: 404,
         };
       }
 
       if (user) {
         return {
           success: true,
+          statusCode: 200,
           data: user,
         };
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -342,7 +351,7 @@ export class AuthService {
 
       const user = await UserRepository.getUserDetails(userId);
       if (!user) {
-        return { success: false, message: 'User not found' };
+        return { success: false, statusCode: 404, message: 'User not found' };
       }
 
       if (user) {
@@ -355,17 +364,20 @@ export class AuthService {
 
         return {
           success: true,
+          statusCode: 200,
           message: 'User updated successfully',
         };
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -458,6 +470,7 @@ export class AuthService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Logged in successfully',
         authorization: {
           type: 'bearer',
@@ -505,12 +518,14 @@ export class AuthService {
       } catch (error) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User created but failed to create billing account',
         };
       }
 
       return {
         message: 'Logged in successfully',
+        statusCode: 200,
         authorization: {
           type: 'bearer',
           access_token: accessToken,
@@ -521,6 +536,7 @@ export class AuthService {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -568,12 +584,14 @@ export class AuthService {
       } catch (error) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User created but failed to create billing account',
         };
       }
 
       return {
         message: 'Logged in successfully',
+        statusCode: 200,
         authorization: {
           type: 'bearer',
           access_token: accessToken,
@@ -582,7 +600,7 @@ export class AuthService {
         type: user.type,
       };
     } catch (error) {
-      return { success: false, message: error.message };
+      return { success: false, statusCode: 500, message: error.message };
     }
   }
 
@@ -611,6 +629,7 @@ export class AuthService {
       if (!storedToken || storedToken != refreshToken) {
         return {
           success: false,
+          statusCode: 401,
           message: 'Refresh token is required',
         };
       }
@@ -618,6 +637,7 @@ export class AuthService {
       if (!user_id) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -626,6 +646,7 @@ export class AuthService {
       if (!userDetails) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -635,6 +656,7 @@ export class AuthService {
 
       return {
         success: true,
+        statusCode: 200,
         authorization: {
           type: 'bearer',
           access_token: accessToken,
@@ -643,6 +665,7 @@ export class AuthService {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -654,6 +677,7 @@ export class AuthService {
       if (!storedToken) {
         return {
           success: false,
+          statusCode: 404,
           message: 'Refresh token not found',
         };
       }
@@ -662,11 +686,13 @@ export class AuthService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Refresh token revoked successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -693,17 +719,20 @@ export class AuthService {
 
         return {
           success: true,
+          statusCode: 200,
           message: 'We have sent an OTP code to your email',
         };
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'Email not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -726,23 +755,27 @@ export class AuthService {
         if (existToken) {
           return {
             success: true,
+            statusCode: 200,
             message: 'OTP verified successfully',
           };
         } else {
           return {
             success: false,
+            statusCode: 400,
             message: 'Invalid OTP',
           };
         }
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'Email not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -775,23 +808,27 @@ export class AuthService {
 
           return {
             success: true,
+            statusCode: 200,
             message: 'Password updated successfully',
           };
         } else {
           return {
             success: false,
+            statusCode: 400,
             message: 'Invalid token',
           };
         }
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'Email not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -828,23 +865,27 @@ export class AuthService {
 
           return {
             success: true,
+            statusCode: 200,
             message: 'Email verified successfully',
           };
         } else {
           return {
             success: false,
+            statusCode: 400,
             message: 'Invalid token',
           };
         }
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'Email not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -870,17 +911,20 @@ export class AuthService {
 
         return {
           success: true,
+          statusCode: 200,
           message: 'We have sent a verification code to your email',
         };
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'Email not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -903,23 +947,27 @@ export class AuthService {
 
           return {
             success: true,
+            statusCode: 200,
             message: 'Password updated successfully',
           };
         } else {
           return {
             success: false,
+            statusCode: 400,
             message: 'Invalid password',
           };
         }
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'Email not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -943,17 +991,20 @@ export class AuthService {
 
         return {
           success: true,
+          statusCode: 200,
           message: 'We have sent an OTP code to your email',
         };
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -992,23 +1043,27 @@ export class AuthService {
 
           return {
             success: true,
+            statusCode: 200,
             message: 'Email updated successfully',
           };
         } else {
           return {
             success: false,
+            statusCode: 400,
             message: 'Invalid token',
           };
         }
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1021,6 +1076,7 @@ export class AuthService {
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1032,16 +1088,19 @@ export class AuthService {
       if (!isValid) {
         return {
           success: false,
+          statusCode: 400,
           message: 'Invalid token',
         };
       }
       return {
         success: true,
+        statusCode: 200,
         message: '2FA verified successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1054,17 +1113,20 @@ export class AuthService {
         await UserRepository.enable2FA(user_id);
         return {
           success: true,
+          statusCode: 200,
           message: '2FA enabled successfully',
         };
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1077,17 +1139,20 @@ export class AuthService {
         await UserRepository.disable2FA(user_id);
         return {
           success: true,
+          statusCode: 200,
           message: '2FA disabled successfully',
         };
       } else {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1099,6 +1164,7 @@ export class AuthService {
       if (!user_id) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -1111,6 +1177,7 @@ export class AuthService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -1121,11 +1188,13 @@ export class AuthService {
       });
       return {
         success: true,
+        statusCode: 200,
         message: 'User account disabled successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1136,6 +1205,7 @@ export class AuthService {
       if (!user_id) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -1148,6 +1218,7 @@ export class AuthService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -1158,11 +1229,13 @@ export class AuthService {
       });
       return {
         success: true,
+        statusCode: 200,
         message: 'User account enabled successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1173,6 +1246,7 @@ export class AuthService {
       if (!user_id) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -1185,6 +1259,7 @@ export class AuthService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -1197,11 +1272,13 @@ export class AuthService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'User account deleted successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1222,11 +1299,13 @@ export class AuthService {
       });
       return {
         success: true,
+        statusCode: 200,
         message: 'Support request sent successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -1241,6 +1320,7 @@ export class AuthService {
       if (reported_user_id === reporter_user_id) {
         return {
           success: false,
+          statusCode: 400,
           message: 'You cannot report yourself',
         };
       }
@@ -1254,6 +1334,7 @@ export class AuthService {
       if (existingReport) {
         return {
           success: false,
+          statusCode: 409,
           message: 'You have already reported this user',
         };
       }
@@ -1267,11 +1348,13 @@ export class AuthService {
       });
       return {
         success: true,
+        statusCode: 200,
         message: 'User reported successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
