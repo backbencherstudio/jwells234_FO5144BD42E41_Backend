@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Res,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -23,6 +24,7 @@ import { Roles } from '../../../common/guard/role/roles.decorator';
 import { RolesGuard } from '../../../common/guard/role/roles.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { GetUser } from 'src/modules/auth/decorators/get-user.decorator';
+import { Response } from 'express';
 
 @ApiBearerAuth()
 @ApiTags('User')
@@ -34,13 +36,21 @@ export class UserController {
 
   @ApiResponse({ description: 'Create a user' })
   @Post()
-  async create(@Body() createUserDto: CreateUserDto) {
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      const user = await this.userService.create(createUserDto);
+      const user: any = await this.userService.create(createUserDto);
+      if (user.statusCode) {
+        res.status(user.statusCode);
+      }
       return user;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -50,17 +60,27 @@ export class UserController {
   @Get()
   async getAllUsers(
     @Query() query: { q?: string; type?: string; approved?: string },
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
       const q = query.q;
       const type = query.type;
       const approved = query.approved;
 
-      const users = await this.userService.getAllUsers({ q, type, approved });
+      const users: any = await this.userService.getAllUsers({
+        q,
+        type,
+        approved,
+      });
+      if (users.statusCode) {
+        res.status(users.statusCode);
+      }
       return users;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -68,13 +88,18 @@ export class UserController {
 
   @ApiResponse({ description: 'Warn a user by id' })
   @Post(':id/warn')
-  async warnUser(@Param('id') id: string) {
+  async warnUser(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     try {
-      const user = await this.userService.warnUser(id);
+      const user: any = await this.userService.warnUser(id);
+      if (user.statusCode) {
+        res.status(user.statusCode);
+      }
       return user;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -82,13 +107,18 @@ export class UserController {
 
   @ApiResponse({ description: 'Ban a user by id' })
   @Post(':id/ban')
-  async banUser(@Param('id') id: string) {
+  async banUser(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     try {
-      const user = await this.userService.banUser(id);
+      const user: any = await this.userService.banUser(id);
+      if (user.statusCode) {
+        res.status(user.statusCode);
+      }
       return user;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -128,13 +158,18 @@ export class UserController {
 
   @ApiResponse({ description: 'Get a user by id' })
   @Get(':id')
-  async getUserById(@Param('id') id: string) {
+  async getUserById(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     try {
-      const user = await this.userService.getUserById(id);
+      const user: any = await this.userService.getUserById(id);
+      if (user.statusCode) {
+        res.status(user.statusCode);
+      }
       return user;
     } catch (error) {
+       res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -145,13 +180,19 @@ export class UserController {
   async updateUser(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
+    @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      const user = await this.userService.updateUser(id, updateUserDto);
+      const user: any = await this.userService.updateUser(id, updateUserDto);
+      if (user.statusCode) {
+        res.status(user.statusCode);
+      }
       return user;
     } catch (error) {
+       res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -159,13 +200,18 @@ export class UserController {
 
   @ApiResponse({ description: 'Delete a user by id' })
   @Delete(':id')
-  async deleteUser(@Param('id') id: string) {
+  async deleteUser(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     try {
-      const user = await this.userService.deleteUser(id);
+      const user: any = await this.userService.deleteUser(id);
+      if (user.statusCode) {
+        res.status(user.statusCode);
+      }
       return user;
     } catch (error) {
+       res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -173,14 +219,19 @@ export class UserController {
 
   @ApiResponse({ description: 'Get my profile info' })
   @Get('profile/me')
-  async getProfile(@GetUser() user: any) {
+  async getProfile(@GetUser() user: any, @Res({ passthrough: true }) res: Response) {
     try {
       console.log('User from token:', user);
-      const profile = await this.userService.getProfile(user.userId);
+      const profile: any = await this.userService.getProfile(user.userId);
+      if (profile.statusCode) {
+        res.status(profile.statusCode);
+      }
       return profile;
     } catch (error) {
+       res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }

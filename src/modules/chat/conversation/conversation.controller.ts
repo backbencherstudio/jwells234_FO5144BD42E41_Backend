@@ -6,6 +6,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Res,
 } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
@@ -14,6 +15,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Role } from '../../../common/guard/role/role.enum';
 import { Roles } from '../../../common/guard/role/roles.decorator';
+import { Response } from 'express';
 
 @ApiBearerAuth()
 @ApiTags('Conversation')
@@ -24,15 +26,23 @@ export class ConversationController {
 
   @ApiOperation({ summary: 'Create conversation' })
   @Post()
-  async create(@Body() createConversationDto: CreateConversationDto) {
+  async create(
+    @Body() createConversationDto: CreateConversationDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      const conversation = await this.conversationService.create(
+      const response: any = await this.conversationService.create(
         createConversationDto,
       );
-      return conversation;
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -41,13 +51,18 @@ export class ConversationController {
   // @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Get all conversations' })
   @Get()
-  async findAll() {
+  async findAll(@Res({ passthrough: true }) res: Response) {
     try {
-      const conversations = await this.conversationService.findAll();
-      return conversations;
+      const response: any = await this.conversationService.findAll();
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -55,13 +70,18 @@ export class ConversationController {
 
   @ApiOperation({ summary: 'Get a conversation by id' })
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     try {
-      const conversation = await this.conversationService.findOne(id);
-      return conversation;
+      const response: any = await this.conversationService.findOne(id);
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -70,13 +90,18 @@ export class ConversationController {
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Delete a conversation' })
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     try {
-      const conversation = await this.conversationService.remove(id);
-      return conversation;
+      const response: any = await this.conversationService.remove(id);
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
     } catch (error) {
+      res.status(500);
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }

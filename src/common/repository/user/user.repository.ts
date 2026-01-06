@@ -268,7 +268,12 @@ export class UserRepository {
         let baseUsername = email.split('@')[0];
         let candidateUsername = baseUsername;
         let counter = 1;
-        while (await UserRepository.exist({ field: 'username', value: candidateUsername })) {
+        while (
+          await UserRepository.exist({
+            field: 'username',
+            value: candidateUsername,
+          })
+        ) {
           candidateUsername = `${baseUsername}${counter}`;
           counter++;
         }
@@ -566,6 +571,7 @@ export class UserRepository {
     if (!user) {
       return {
         success: false,
+        statusCode: 404,
         message: 'User not found',
       };
     }
@@ -582,6 +588,7 @@ export class UserRepository {
 
     return {
       success: true,
+      statusCode: 200,
       message: '2FA secret generated successfully',
       data: {
         secret: secret.base32,

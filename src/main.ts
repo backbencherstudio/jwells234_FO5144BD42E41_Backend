@@ -11,6 +11,7 @@ import { AppModule } from './app.module';
 import appConfig from './config/app.config';
 import { CustomExceptionFilter } from './common/exception/custom-exception.filter';
 import { SazedStorage } from './common/lib/Disk/SazedStorage';
+import { HttpStatusFromBodyInterceptor } from './common/interceptor/http-status-from-body.interceptor';
 
 async function bootstrap() {
   // Auto-detect storage driver: prefer MinIO/AWS S3 when env vars are present.
@@ -134,6 +135,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new CustomExceptionFilter());
+  app.useGlobalInterceptors(new HttpStatusFromBodyInterceptor());
 
   // swagger
   const options = new DocumentBuilder()

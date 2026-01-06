@@ -38,24 +38,42 @@ import { LocationGuard } from '../../common/guard/location.guard';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  private getResponseStatusCode(payload: unknown): number | undefined {
+    if (!payload || typeof payload !== 'object') return undefined;
+    if (!('statusCode' in payload)) return undefined;
+
+    const statusCode = (payload as { statusCode?: unknown }).statusCode;
+    return typeof statusCode === 'number' ? statusCode : undefined;
+  }
+
+  private sendResponse(res: Response, payload: unknown, defaultStatusCode = HttpStatus.OK) {
+    const statusCode = this.getResponseStatusCode(payload) ?? defaultStatusCode;
+    return res.status(statusCode).json(payload);
+  }
+
+  private sendError(res: Response, error: any, fallbackMessage: string) {
+    const statusCode = error?.getStatus ? error.getStatus() : error?.status || 500;
+    return res.status(statusCode).json({
+      success: false,
+      statusCode,
+      message: error?.message || fallbackMessage,
+    });
+  }
+
   @ApiOperation({ summary: 'Get user details' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Req() req: Request) {
+  async me(@Req() req: Request, @Res() res: Response) {
     try {
       // console.log(req.user);
       const user_id = req.user.userId;
 
       const response = await this.authService.me(user_id);
 
-      return response;
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Failed to fetch user details',
-      };
+      return this.sendError(res, error, 'Failed to fetch user details');
     }
   }
 
@@ -69,7 +87,7 @@ export class AuthController {
   async create(
     @Req() req: Request,
     @Body() data: CreateUserDto,
-
+    @Res() res: Response,
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
     try {
@@ -78,13 +96,17 @@ export class AuthController {
       const username = data.username;
       const password = data.password;
       const type = data.type;
-      
+
       let latitude = data.latitude;
       let longitude = data.longitude;
 
       if (latitude === undefined || longitude === undefined) {
-        latitude = req.headers['x-latitude'] ? parseFloat(req.headers['x-latitude'] as string) : undefined;
-        longitude = req.headers['x-longitude'] ? parseFloat(req.headers['x-longitude'] as string) : undefined;
+        latitude = req.headers['x-latitude']
+          ? parseFloat(req.headers['x-latitude'] as string)
+          : undefined;
+        longitude = req.headers['x-longitude']
+          ? parseFloat(req.headers['x-longitude'] as string)
+          : undefined;
       }
 
       const avatarFile = avatar;
@@ -127,13 +149,9 @@ export class AuthController {
         longitude: longitude,
       });
 
-      return response;
+      return this.sendResponse(res, response, HttpStatus.CREATED);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to register');
     }
   }
 
@@ -152,8 +170,12 @@ export class AuthController {
       let longitude = req.body.longitude;
 
       if (latitude === undefined || longitude === undefined) {
-        latitude = req.headers['x-latitude'] ? parseFloat(req.headers['x-latitude'] as string) : undefined;
-        longitude = req.headers['x-longitude'] ? parseFloat(req.headers['x-longitude'] as string) : undefined;
+        latitude = req.headers['x-latitude']
+          ? parseFloat(req.headers['x-latitude'] as string)
+          : undefined;
+        longitude = req.headers['x-longitude']
+          ? parseFloat(req.headers['x-longitude'] as string)
+          : undefined;
       }
 
       const response = await this.authService.login({
@@ -170,13 +192,9 @@ export class AuthController {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       });
 
-      res.json(response);
+      return this.sendResponse(res, response);
     } catch (error) {
-      const status = error.getStatus ? error.getStatus() : (error.status || 500);
-      return res.status(status).json({
-        success: false,
-        message: error.message,
-      });
+      return this.sendError(res, error, 'Failed to login');
     }
   }
 
@@ -187,7 +205,8 @@ export class AuthController {
   async refreshToken(
     @Req() req: Request,
     @Res() res: Response,
-    @Body() body: { refresh_token: string; latitude?: number; longitude?: number },
+    @Body()
+    body: { refresh_token: string; latitude?: number; longitude?: number },
   ) {
     try {
       const user_id = req.user.userId;
@@ -196,8 +215,12 @@ export class AuthController {
       let longitude = body.longitude;
 
       if (latitude === undefined || longitude === undefined) {
-        latitude = req.headers['x-latitude'] ? parseFloat(req.headers['x-latitude'] as string) : undefined;
-        longitude = req.headers['x-longitude'] ? parseFloat(req.headers['x-longitude'] as string) : undefined;
+        latitude = req.headers['x-latitude']
+          ? parseFloat(req.headers['x-latitude'] as string)
+          : undefined;
+        longitude = req.headers['x-longitude']
+          ? parseFloat(req.headers['x-longitude'] as string)
+          : undefined;
       }
 
       const response = await this.authService.refreshToken(
@@ -207,30 +230,22 @@ export class AuthController {
         longitude,
       );
 
-      return res.json(response);
+      return this.sendResponse(res, response);
     } catch (error) {
-      const status = error.getStatus ? error.getStatus() : (error.status || 500);
-      return res.status(status).json({
-        success: false,
-        message: error.message,
-      });
+      return this.sendError(res, error, 'Failed to refresh token');
     }
   }
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Req() req: Request) {
+  async logout(@Req() req: Request, @Res() res: Response) {
     try {
       const userId = req.user.userId;
       const response = await this.authService.revokeRefreshToken(userId);
-      return response;
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to logout');
     }
   }
 
@@ -298,6 +313,7 @@ export class AuthController {
     @Req() req: any,
     @Body() data: UpdateUserDto,
     @UploadedFile() avatar: Express.Multer.File,
+    @Res() res: Response,
   ) {
     try {
       const user_id = req.user.userId;
@@ -312,15 +328,13 @@ export class AuthController {
       }
 
       const response = await this.authService.updateUser(user_id, data, avatar);
-      console.log('user_id', user_id);
-      console.log('data', data);
-      console.log('avatar', avatar);
-      console.log('response', response);
-      return response;
+      // console.log('user_id', user_id);
+      // console.log('data', data);
+      // console.log('avatar', avatar);
+      // console.log('response', response);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,        statusCode: 500,        message: 'Failed to update user',
-      };
+      return this.sendError(res, error, 'Failed to update user');
     }
   }
 
@@ -328,26 +342,26 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Forgot password' })
   @Post('forgot-password')
-  async forgotPassword(@Body() data: { email: string }) {
+  async forgotPassword(
+    @Body() data: { email: string },
+    @Res() res: Response,
+  ) {
     try {
       const email = data.email;
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
-      return await this.authService.forgotPassword(email);
+      const response = await this.authService.forgotPassword(email);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Something went wrong',
-      };
+      return this.sendError(res, error, 'Something went wrong');
     }
   }
 
   // verify email to verify the email
   @ApiOperation({ summary: 'Verify email' })
   @Post('verify-email')
-  async verifyEmail(@Body() data: VerifyEmailDto) {
+  async verifyEmail(@Body() data: VerifyEmailDto, @Res() res: Response) {
     try {
       const email = data.email;
       const token = data.otp;
@@ -357,35 +371,34 @@ export class AuthController {
       if (!token) {
         throw new HttpException('Token not provided', HttpStatus.UNAUTHORIZED);
       }
-      return await this.authService.verifyEmail({
-        email: email,
-        token: token,
+
+      const response = await this.authService.verifyEmail({
+        email: data.email,
+        token: data.otp,
       });
+
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Failed to verify email',
-      };
+      return this.sendError(res, error, 'Failed to verify email');
     }
   }
 
   // resend verification email to verify the email
   @ApiOperation({ summary: 'Resend verification email' })
   @Post('resend-verification-email')
-  async resendVerificationEmail(@Body() data: { email: string }) {
+  async resendVerificationEmail(
+    @Body() data: { email: string },
+    @Res() res: Response,
+  ) {
     try {
       const email = data.email;
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
-      return await this.authService.resendVerificationEmail(email);
+      const response = await this.authService.resendVerificationEmail(email);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Failed to resend verification email',
-      };
+      return this.sendError(res, error, 'Failed to resend verification email');
     }
   }
 
@@ -394,6 +407,7 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(
     @Body() data: { email: string; otp: string; new_password: string },
+    @Res() res: Response,
   ) {
     try {
       const email = data.email;
@@ -411,17 +425,14 @@ export class AuthController {
           HttpStatus.UNAUTHORIZED,
         );
       }
-      return await this.authService.resetPassword({
+      const response = await this.authService.resetPassword({
         email: email,
         token: token,
         password: password,
       });
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Something went wrong',
-      };
+      return this.sendError(res, error, 'Something went wrong');
     }
   }
 
@@ -433,6 +444,7 @@ export class AuthController {
   async changePassword(
     @Req() req: Request,
     @Body() data: { email: string; old_password: string; new_password: string },
+    @Res() res: Response,
   ) {
     try {
       // const email = data.email;
@@ -455,18 +467,15 @@ export class AuthController {
           HttpStatus.UNAUTHORIZED,
         );
       }
-      return await this.authService.changePassword({
+      const response = await this.authService.changePassword({
         // email: email,
         user_id: user_id,
         oldPassword: oldPassword,
         newPassword: newPassword,
       });
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Failed to change password',
-      };
+      return this.sendError(res, error, 'Failed to change password');
     }
   }
 
@@ -480,6 +489,7 @@ export class AuthController {
   async requestEmailChange(
     @Req() req: Request,
     @Body() data: { email: string },
+    @Res() res: Response,
   ) {
     try {
       const user_id = req.user.userId;
@@ -487,13 +497,13 @@ export class AuthController {
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
       }
-      return await this.authService.requestEmailChange(user_id, email);
+      const response = await this.authService.requestEmailChange(
+        user_id,
+        email,
+      );
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Something went wrong',
-      };
+      return this.sendError(res, error, 'Something went wrong');
     }
   }
 
@@ -504,6 +514,7 @@ export class AuthController {
   async changeEmail(
     @Req() req: Request,
     @Body() data: { email: string; token: string },
+    @Res() res: Response,
   ) {
     try {
       const user_id = req.user.userId;
@@ -516,17 +527,14 @@ export class AuthController {
       if (!token) {
         throw new HttpException('Token not provided', HttpStatus.UNAUTHORIZED);
       }
-      return await this.authService.changeEmail({
+      const response = await this.authService.changeEmail({
         user_id: user_id,
         new_email: email,
         token: token,
       });
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: 'Something went wrong',
-      };
+      return this.sendError(res, error, 'Something went wrong');
     }
   }
   // -------end change email address------
@@ -536,16 +544,16 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('generate-2fa-secret')
-  async generate2FASecret(@Req() req: Request) {
+  async generate2FASecret(
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     try {
       const user_id = req.user.userId;
-      return await this.authService.generate2FASecret(user_id);
+      const response = await this.authService.generate2FASecret(user_id);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to generate 2FA secret');
     }
   }
 
@@ -553,17 +561,18 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('verify-2fa')
-  async verify2FA(@Req() req: Request, @Body() data: { token: string }) {
+  async verify2FA(
+    @Req() req: Request,
+    @Body() data: { token: string },
+    @Res() res: Response,
+  ) {
     try {
       const user_id = req.user.userId;
       const token = data.token;
-      return await this.authService.verify2FA(user_id, token);
+      const response = await this.authService.verify2FA(user_id, token);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to verify 2FA');
     }
   }
 
@@ -571,16 +580,16 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('enable-2fa')
-  async enable2FA(@Req() req: Request) {
+  async enable2FA(
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     try {
       const user_id = req.user.userId;
-      return await this.authService.enable2FA(user_id);
+      const response = await this.authService.enable2FA(user_id);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to enable 2FA');
     }
   }
 
@@ -588,16 +597,16 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('disable-2fa')
-  async disable2FA(@Req() req: Request) {
+  async disable2FA(
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     try {
       const user_id = req.user.userId;
-      return await this.authService.disable2FA(user_id);
+      const response = await this.authService.disable2FA(user_id);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to disable 2FA');
     }
   }
   // --------- end 2FA ---------
@@ -606,16 +615,16 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('disable-account')
-  async disableAccount(@GetUser() user) {
+  async disableAccount(
+    @GetUser() user,
+    @Res() res: Response,
+  ) {
     try {
       const user_id = user.userId;
-      return await this.authService.disableAccount(user_id);
+      const response = await this.authService.disableAccount(user_id);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to disable account');
     }
   }
 
@@ -623,16 +632,16 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('enable-account')
-  async enableAccount(@GetUser() user) {
+  async enableAccount(
+    @GetUser() user,
+    @Res() res: Response,
+  ) {
     try {
       const user_id = user.userId;
-      return await this.authService.enableAccount(user_id);
+      const response = await this.authService.enableAccount(user_id);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to enable account');
     }
   }
 
@@ -640,16 +649,16 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('delete-account')
-  async deleteAccount(@GetUser() user) {
+  async deleteAccount(
+    @GetUser() user,
+    @Res() res: Response,
+  ) {
     try {
       const user_id = user.userId;
-      return await this.authService.deleteAccount(user_id);
+      const response = await this.authService.deleteAccount(user_id);
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to delete account');
     }
   }
 
@@ -664,6 +673,7 @@ export class AuthController {
       subject: string;
       message: string;
     },
+    @Res() res: Response,
   ) {
     try {
       const name = user.name;
@@ -692,13 +702,9 @@ export class AuthController {
         message,
       );
 
-      return response;
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to send support request');
     }
   }
 
@@ -713,6 +719,7 @@ export class AuthController {
       reported_user_id: string;
       reason: string;
     },
+    @Res() res: Response,
   ) {
     try {
       const reporting_user_id = user.userId;
@@ -732,13 +739,9 @@ export class AuthController {
         reported_user_id,
         reason,
       );
-      return response;
+      return this.sendResponse(res, response);
     } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+      return this.sendError(res, error, 'Failed to report user');
     }
   }
 }

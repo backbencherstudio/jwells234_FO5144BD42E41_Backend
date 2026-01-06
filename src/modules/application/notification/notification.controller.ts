@@ -1,8 +1,17 @@
-import { Controller, Get, Patch, Param, UseGuards, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  UseGuards,
+  Delete,
+  Res,
+} from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { GetUser } from '../../auth/decorators/get-user.decorator';
+import { Response } from 'express';
 
 @ApiTags('Notification')
 @ApiBearerAuth()
@@ -13,31 +22,112 @@ export class NotificationController {
 
   @ApiOperation({ summary: 'Get all notifications for the current user' })
   @Get()
-  getAllNotifications(@GetUser() user) {
-    return this.notificationService.getAllNotifications(user.userId);
+  async getAllNotifications(
+    @GetUser() user,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.notificationService.getAllNotifications(
+        user.userId,
+      );
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Mark all notifications as read' })
   @Patch('read-all')
-  markAllAsRead(@GetUser() user) {
-    return this.notificationService.markAllAsRead(user.userId);
+  async markAllAsRead(
+    @GetUser() user,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.notificationService.markAllAsRead(
+        user.userId,
+      );
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Mark a specific notification as read' })
   @Patch(':id/read')
-  markAsRead(@GetUser() user, @Param('id') id: string) {
-    return this.notificationService.markAsRead(user.userId, id);
+  async markAsRead(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.notificationService.markAsRead(
+        user.userId,
+        id,
+      );
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Mark a specific notification as unread' })
   @Patch(':id/unread')
-  markAsUnread(@GetUser() user, @Param('id') id: string) {
-    return this.notificationService.markAsUnread(user.userId, id);
+  async markAsUnread(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.notificationService.markAsUnread(
+        user.userId,
+        id,
+      );
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Delete a specific notification' })
   @Delete(':id/delete')
-  deleteNotification(@GetUser() user, @Param('id') id: string) {
-    return this.notificationService.deleteNotification(user.userId, id);
+  async deleteNotification(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.notificationService.deleteNotification(
+        user.userId,
+        id,
+      );
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 }

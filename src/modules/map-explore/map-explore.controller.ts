@@ -7,13 +7,16 @@ import {
   Delete,
   Query,
   UseGuards,
+  Res,
+  Req,
 } from '@nestjs/common';
 import { MapExploreService } from './map-explore.service';
 import { SaveLocationDto } from './dto/save-location.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
-import { SubscriptionGuard } from 'src/common/guard/subscription.guard';
+import { SubscriptionGuard } from '../../common/guard/subscription.guard';
+import { Response } from 'express';
 
 @ApiTags('Map Explore')
 @ApiBearerAuth()
@@ -24,25 +27,99 @@ export class MapExploreController {
 
   @ApiOperation({ summary: 'Search for places' })
   @Get('search')
-  searchPlaces(@Query('query') query: string) {
-    return this.mapExploreService.searchPlaces(query);
+  async searchPlaces(
+    @Query('query') query: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.mapExploreService.searchPlaces(query);
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Save a location' })
   @Post('save')
-  saveLocation(@GetUser() user, @Body() saveLocationDto: SaveLocationDto) {
-    return this.mapExploreService.saveLocation(user.userId, saveLocationDto);
+  async saveLocation(
+    @GetUser() user,
+    @Body() saveLocationDto: SaveLocationDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.mapExploreService.saveLocation(
+        user.userId,
+        saveLocationDto,
+      );
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Get saved locations' })
   @Get('saved')
-  getSavedLocations(@GetUser() user) {
-    return this.mapExploreService.getSavedLocations(user.userId);
+  async getSavedLocations(
+    @GetUser() user,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.mapExploreService.getSavedLocations(
+        user.userId,
+      );
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   @ApiOperation({ summary: 'Delete a saved location' })
   @Delete('saved/:id')
-  deleteLocation(@GetUser() user, @Param('id') id: string) {
-    return this.mapExploreService.deleteLocation(user.userId, id);
+  async deleteLocation(
+    @GetUser() user,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const response = await this.mapExploreService.deleteLocation(
+        user.userId,
+        id,
+      );
+      if (response.statusCode) {
+        res.status(response.statusCode);
+      }
+      return response;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 }

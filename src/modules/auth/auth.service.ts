@@ -3,6 +3,8 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRedis } from '@nestjs-modules/ioredis';
@@ -834,61 +836,92 @@ export class AuthService {
     }
   }
 
+  // async verifyEmail({ email, token }) {
+  //   try {
+  //     const user = await UserRepository.exist({
+  //       field: 'email',
+  //       value: email,
+  //     });
+
+  //     if (user) {
+  //       const existToken = await UcodeRepository.validateToken({
+  //         email: email,
+  //         token: token,
+  //       });
+
+  //       if (existToken) {
+  //         await this.prisma.user.update({
+  //           where: {
+  //             id: user.id,
+  //           },
+  //           data: {
+  //             email_verified_at: new Date(Date.now()),
+  //           },
+  //         });
+
+  //         // delete otp code
+  //         // await UcodeRepository.deleteToken({
+  //         //   email: email,
+  //         //   token: token,
+  //         // });
+
+  //         return {
+  //           success: true,
+  //           statusCode: 200,
+  //           message: 'Email verified successfully',
+  //         };
+  //       } else {
+  //         return {
+  //           success: false,
+  //           statusCode: 400,
+  //           message: 'Invalid token',
+  //         };
+  //       }
+  //     } else {
+  //       return {
+  //         success: false,
+  //         statusCode: 404,
+  //         message: 'Email not found',
+  //       };
+  //     }
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       statusCode: 500,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
+
   async verifyEmail({ email, token }) {
-    try {
-      const user = await UserRepository.exist({
-        field: 'email',
-        value: email,
-      });
+    const user = await UserRepository.exist({
+      field: 'email',
+      value: email,
+    });
 
-      if (user) {
-        const existToken = await UcodeRepository.validateToken({
-          email: email,
-          token: token,
-        });
-
-        if (existToken) {
-          await this.prisma.user.update({
-            where: {
-              id: user.id,
-            },
-            data: {
-              email_verified_at: new Date(Date.now()),
-            },
-          });
-
-          // delete otp code
-          // await UcodeRepository.deleteToken({
-          //   email: email,
-          //   token: token,
-          // });
-
-          return {
-            success: true,
-            statusCode: 200,
-            message: 'Email verified successfully',
-          };
-        } else {
-          return {
-            success: false,
-            statusCode: 400,
-            message: 'Invalid token',
-          };
-        }
-      } else {
-        return {
-          success: false,
-          statusCode: 404,
-          message: 'Email not found',
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        statusCode: 500,
-        message: error.message,
-      };
+    if (!user) {
+      throw new HttpException('Email not found', HttpStatus.NOT_FOUND);
     }
+
+    const existToken = await UcodeRepository.validateToken({
+      email,
+      token,
+    });
+
+    if (!existToken) {
+      throw new HttpException('Invalid token', HttpStatus.BAD_REQUEST);
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { email_verified_at: new Date() },
+    });
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Email verified successfully',
+    };
   }
 
   async resendVerificationEmail(email: string) {
