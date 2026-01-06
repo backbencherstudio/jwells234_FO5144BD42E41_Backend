@@ -40,6 +40,10 @@ export class CreateShoutDto {
   @IsOptional()
   images?: any[];
 
+  @ApiProperty({ type: 'array', items: { type: 'string', format: 'binary' }, required: false })
+  @IsOptional()
+  video?: any[];
+
   @ApiProperty({ type: 'string', format: 'binary', required: false })
   @IsOptional()
   audio?: any;

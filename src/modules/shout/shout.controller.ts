@@ -25,6 +25,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { SubscriptionGuard } from 'src/common/guard/subscription.guard';
@@ -40,37 +41,47 @@ export class ShoutController {
   @Post()
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'images', maxCount: 5 },
-      { name: 'audio', maxCount: 1 },
-    ]),
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 5 },
+        { name: 'audio', maxCount: 1 },
+        { name: 'video', maxCount: 3 },
+      ],
+      {
+        storage: memoryStorage(),
+      },
+    ),
   )
   async createPost(
     @GetUser() user,
     @Body() createShoutDto: CreateShoutDto,
     @UploadedFiles()
-    files: { images?: Express.Multer.File[]; audio?: Express.Multer.File[] },
+    files: { images?: Express.Multer.File[]; audio?: Express.Multer.File[]; video?: Express.Multer.File[] },
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
       const images = files?.images;
       const audio = files?.audio ? files.audio[0] : null;
+      const videos = files?.video;
       const result = await this.shoutService.createPost(
         user.userId,
         createShoutDto,
         images,
         audio,
+        videos,
       );
       if (result.statusCode) {
         res.status(result.statusCode);
       }
       return result;
     } catch (error) {
+      // Log the underlying error so we can diagnose 500s.
+      console.error('Failed to create shout:', error);
       res.status(500);
       return {
         success: false,
         statusCode: 500,
-        message: 'Failed to create shout',
+        message: error?.message || 'Failed to create shout',
       };
     }
   }

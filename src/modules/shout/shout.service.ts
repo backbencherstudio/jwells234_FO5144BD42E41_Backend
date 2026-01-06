@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { readFile } from 'node:fs/promises';
 import { CreateShoutDto } from './dto/create-shout.dto';
 import { UpdateShoutDto } from './dto/update-shout.dto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -48,7 +49,20 @@ export class ShoutService {
     createShoutDto: CreateShoutDto,
     images?: Express.Multer.File[],
     audio?: Express.Multer.File,
+    videos?: Express.Multer.File[],
   ) {
+    const getFileBytes = async (file: Express.Multer.File): Promise<Buffer> => {
+      if (file?.buffer && Buffer.isBuffer(file.buffer)) {
+        return file.buffer;
+      }
+      // If using disk storage, Multer provides a file.path; read it.
+      const anyFile = file as any;
+      if (anyFile?.path && typeof anyFile.path === 'string') {
+        return await readFile(anyFile.path);
+      }
+      throw new Error('Uploaded file data is missing (no buffer/path)');
+    };
+
     const {
       content,
       category,
@@ -58,6 +72,19 @@ export class ShoutService {
       is_anonymous,
       audio_duration,
     } = createShoutDto;
+
+    const userExists = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!userExists) {
+      return {
+        success: false,
+        statusCode: 401,
+        message: 'Invalid or missing user. Please login again.',
+      };
+    }
 
     const shout = await this.prisma.shout.create({
       data: {
@@ -82,7 +109,8 @@ export class ShoutService {
         const fileName = `${StringHelper.randomString()}-${safeName}`;
         const path = `shouts/${shout.id}/images/${fileName}`;
 
-        await SazedStorage.put(path, image.buffer);
+        const bytes = await getFileBytes(image);
+        await SazedStorage.put(path, bytes);
         const url = SazedStorage.url(encodeURI(path));
 
         await this.prisma.shoutMedia.create({
@@ -105,7 +133,8 @@ export class ShoutService {
       const fileName = `${StringHelper.randomString()}-${safeName}`;
       const path = `shouts/${shout.id}/audio/${fileName}`;
 
-      await SazedStorage.put(path, audio.buffer);
+      const bytes = await getFileBytes(audio);
+      await SazedStorage.put(path, bytes);
       const url = SazedStorage.url(encodeURI(path));
 
       await this.prisma.shoutMedia.create({
@@ -116,6 +145,31 @@ export class ShoutService {
           duration: audio_duration,
         },
       });
+    }
+
+    // Handle Video
+    if (videos && videos.length > 0) {
+      for (const video of videos) {
+        const safeName = video.originalname
+          .toLowerCase()
+          .replace(/[^a-z0-9.\s-_]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-');
+        const fileName = `${StringHelper.randomString()}-${safeName}`;
+        const path = `shouts/${shout.id}/video/${fileName}`;
+
+        const bytes = await getFileBytes(video);
+        await SazedStorage.put(path, bytes);
+        const url = SazedStorage.url(encodeURI(path));
+
+        await this.prisma.shoutMedia.create({
+          data: {
+            shout_id: shout.id,
+            type: 'VIDEO',
+            url: url,
+          },
+        });
+      }
     }
 
     const createdShout = await this.getPostById(shout.id, userId);

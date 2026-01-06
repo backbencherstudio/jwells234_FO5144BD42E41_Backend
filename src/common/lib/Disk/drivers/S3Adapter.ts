@@ -99,6 +99,11 @@ export class S3Adapter implements IStorage {
       // Set ContentType if detected
       if (contentType) {
         params.ContentType = contentType;
+
+        // Ensure media renders inline in browsers (especially for MinIO/S3 direct links)
+        if (contentType.startsWith('audio/') || contentType.startsWith('video/')) {
+          params.ContentDisposition = 'inline';
+        }
       }
 
       const upload = await this.s3.upload(params).promise();
@@ -125,6 +130,15 @@ export class S3Adapter implements IStorage {
       svg: 'image/svg+xml',
       ico: 'image/x-icon',
       bmp: 'image/bmp',
+      // Audio
+      mp3: 'audio/mpeg',
+      mpeg: 'audio/mpeg',
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      oga: 'audio/ogg',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+      flac: 'audio/flac',
       // Videos
       mp4: 'video/mp4',
       webm: 'video/webm',
