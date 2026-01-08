@@ -20,11 +20,13 @@ export class FaqService {
       });
       return {
         success: true,
+        statusCode: 200,
         data: faqs,
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }
@@ -40,13 +42,24 @@ export class FaqService {
           answer: true,
         },
       });
+
+      if (!faq) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'FAQ not found',
+        };
+      }
+
       return {
         success: true,
+        statusCode: 200,
         data: faq,
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: error.message,
       };
     }

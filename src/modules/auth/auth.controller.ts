@@ -46,13 +46,19 @@ export class AuthController {
     return typeof statusCode === 'number' ? statusCode : undefined;
   }
 
-  private sendResponse(res: Response, payload: unknown, defaultStatusCode = HttpStatus.OK) {
+  private sendResponse(
+    res: Response,
+    payload: unknown,
+    defaultStatusCode = HttpStatus.OK,
+  ) {
     const statusCode = this.getResponseStatusCode(payload) ?? defaultStatusCode;
     return res.status(statusCode).json(payload);
   }
 
   private sendError(res: Response, error: any, fallbackMessage: string) {
-    const statusCode = error?.getStatus ? error.getStatus() : error?.status || 500;
+    const statusCode = error?.getStatus
+      ? error.getStatus()
+      : error?.status || 500;
     return res.status(statusCode).json({
       success: false,
       statusCode,
@@ -342,10 +348,7 @@ export class AuthController {
 
   @ApiOperation({ summary: 'Forgot password' })
   @Post('forgot-password')
-  async forgotPassword(
-    @Body() data: { email: string },
-    @Res() res: Response,
-  ) {
+  async forgotPassword(@Body() data: { email: string }, @Res() res: Response) {
     try {
       const email = data.email;
       if (!email) {
@@ -544,10 +547,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('generate-2fa-secret')
-  async generate2FASecret(
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
+  async generate2FASecret(@Req() req: Request, @Res() res: Response) {
     try {
       const user_id = req.user.userId;
       const response = await this.authService.generate2FASecret(user_id);
@@ -580,10 +580,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('enable-2fa')
-  async enable2FA(
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
+  async enable2FA(@Req() req: Request, @Res() res: Response) {
     try {
       const user_id = req.user.userId;
       const response = await this.authService.enable2FA(user_id);
@@ -597,10 +594,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('disable-2fa')
-  async disable2FA(
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
+  async disable2FA(@Req() req: Request, @Res() res: Response) {
     try {
       const user_id = req.user.userId;
       const response = await this.authService.disable2FA(user_id);
@@ -615,10 +609,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('disable-account')
-  async disableAccount(
-    @GetUser() user,
-    @Res() res: Response,
-  ) {
+  async disableAccount(@GetUser() user, @Res() res: Response) {
     try {
       const user_id = user.userId;
       const response = await this.authService.disableAccount(user_id);
@@ -632,10 +623,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('enable-account')
-  async enableAccount(
-    @GetUser() user,
-    @Res() res: Response,
-  ) {
+  async enableAccount(@GetUser() user, @Res() res: Response) {
     try {
       const user_id = user.userId;
       const response = await this.authService.enableAccount(user_id);
@@ -649,10 +637,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('delete-account')
-  async deleteAccount(
-    @GetUser() user,
-    @Res() res: Response,
-  ) {
+  async deleteAccount(@GetUser() user, @Res() res: Response) {
     try {
       const user_id = user.userId;
       const response = await this.authService.deleteAccount(user_id);
@@ -663,31 +648,29 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Halp support' })
-  @Post('help-support')
+  @UseGuards(JwtAuthGuard)
+  @Post('ask-help-support')
   async helpSupport(
     @GetUser() user,
     @Body()
     data: {
-      name: string;
-      email: string;
       subject: string;
       message: string;
     },
     @Res() res: Response,
   ) {
     try {
-      const name = user.name;
-      const email = user.email;
-
+      const userId = user.userId;
       const subject = data.subject;
       const message = data.message;
 
-      if (!name) {
-        throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
+      if (!userId) {
+        throw new HttpException(
+          'User ID not provided',
+          HttpStatus.UNAUTHORIZED,
+        );
       }
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
-      }
+
       if (!message) {
         throw new HttpException(
           'Message not provided',
@@ -696,8 +679,7 @@ export class AuthController {
       }
 
       const response = await this.authService.helpSupport(
-        name,
-        email,
+        userId,
         subject,
         message,
       );

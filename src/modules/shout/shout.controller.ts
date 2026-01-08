@@ -56,7 +56,11 @@ export class ShoutController {
     @GetUser() user,
     @Body() createShoutDto: CreateShoutDto,
     @UploadedFiles()
-    files: { images?: Express.Multer.File[]; audio?: Express.Multer.File[]; video?: Express.Multer.File[] },
+    files: {
+      images?: Express.Multer.File[];
+      audio?: Express.Multer.File[];
+      video?: Express.Multer.File[];
+    },
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
@@ -302,7 +306,12 @@ export class ShoutController {
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      const result = await this.shoutService.getComments(id, +page, +limit);
+      const result = await this.shoutService.getComments(
+        id,
+        user.userId,
+        +page,
+        +limit,
+      );
       if (result.statusCode) {
         res.status(result.statusCode);
       }
@@ -313,6 +322,88 @@ export class ShoutController {
         success: false,
         statusCode: 500,
         message: 'Failed to fetch comments',
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'like a shout comment' })
+  @Post(':shoutId/comment/:commentId/like')
+  async likeComment(
+    @GetUser() user,
+    @Param('shoutId') shoutId: string,
+    @Param('commentId') commentId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const result = await this.shoutService.likeComment(
+        commentId,
+        user.userId,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to like comment',
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'unlike a shout comment' })
+  @Delete(':shoutId/comment/:commentId/unlike')
+  async unlikeComment(
+    @GetUser() user,
+    @Param('shoutId') shoutId: string,
+    @Param('commentId') commentId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const result = await this.shoutService.unlikeComment(
+        commentId,
+        user.userId,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
+    }
+    catch (error) {
+      res.status(500);
+      return {  
+        success: false,
+        statusCode: 500,
+        message: 'Failed to unlike comment',
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'Delete a comment from a shout' })
+  @Delete(':shoutId/comment/:commentId')
+  async deleteComment(
+    @GetUser() user,
+    @Param('shoutId') shoutId: string,
+    @Param('commentId') commentId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const result = await this.shoutService.deleteComment(
+        commentId,
+        user.userId,
+      );
+      if (result.statusCode) {
+        res.status(result.statusCode);
+      }
+      return result;
+    } catch (error) {
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to delete comment',
       };
     }
   }

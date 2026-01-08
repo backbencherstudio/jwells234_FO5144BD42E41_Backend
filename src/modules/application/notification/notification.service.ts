@@ -56,6 +56,7 @@ export class NotificationService {
       if (!userId) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -67,6 +68,7 @@ export class NotificationService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -92,12 +94,14 @@ export class NotificationService {
 
       return {
         success: true,
+        statusCode: 200,
         data: notifications,
       };
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to fetch notifications',
       };
     }
@@ -108,6 +112,7 @@ export class NotificationService {
       if (!userId) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -117,6 +122,7 @@ export class NotificationService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -127,6 +133,7 @@ export class NotificationService {
       if (!notification || notification.receiver_id !== userId) {
         return {
           success: false,
+          statusCode: 404,
           message: 'Notification not found or unauthorized',
         };
       }
@@ -143,11 +150,13 @@ export class NotificationService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'Notification marked as read',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to mark notification as read',
       };
     }
@@ -158,6 +167,7 @@ export class NotificationService {
       if (!userId) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -168,6 +178,7 @@ export class NotificationService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -181,6 +192,7 @@ export class NotificationService {
       if (!notification) {
         return {
           success: true,
+          statusCode: 200,
           message: 'No unread notifications',
         };
       }
@@ -197,11 +209,13 @@ export class NotificationService {
 
       return {
         success: true,
+        statusCode: 200,
         message: 'All notifications marked as read',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to mark all notifications as read',
       };
     }
@@ -212,6 +226,7 @@ export class NotificationService {
       if (!userId) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -221,6 +236,7 @@ export class NotificationService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -231,6 +247,7 @@ export class NotificationService {
       if (!notification || notification.receiver_id !== userId) {
         return {
           success: false,
+          statusCode: 404,
           message: 'Notification not found or unauthorized',
         };
       }
@@ -246,11 +263,13 @@ export class NotificationService {
       });
       return {
         success: true,
+        statusCode: 200,
         message: 'Notification marked as unread',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to mark notification as unread',
       };
     }
@@ -261,6 +280,7 @@ export class NotificationService {
       if (!userId) {
         return {
           success: false,
+          statusCode: 400,
           message: 'User ID is required',
         };
       }
@@ -270,6 +290,7 @@ export class NotificationService {
       if (!user) {
         return {
           success: false,
+          statusCode: 404,
           message: 'User not found',
         };
       }
@@ -280,6 +301,7 @@ export class NotificationService {
       if (!notification || notification.receiver_id !== userId) {
         return {
           success: false,
+          statusCode: 404,
           message: 'Notification not found or unauthorized',
         };
       }
@@ -292,11 +314,13 @@ export class NotificationService {
       });
       return {
         success: true,
+        statusCode: 200,
         message: 'Notification deleted successfully',
       };
     } catch (error) {
       return {
         success: false,
+        statusCode: 500,
         message: 'Failed to delete notification',
       };
     }

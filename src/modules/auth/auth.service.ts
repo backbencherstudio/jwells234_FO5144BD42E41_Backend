@@ -1204,7 +1204,7 @@ export class AuthService {
 
       const user = await this.prisma.user.findUnique({
         where: { id: user_id },
-        select: { id: true },
+        select: { id: true, status: true },
       });
 
       if (!user) {
@@ -1212,6 +1212,14 @@ export class AuthService {
           success: false,
           statusCode: 404,
           message: 'User not found',
+        };
+      }
+
+      if (user.status === 'INACTIVE') {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'User account is already disabled',
         };
       }
 
@@ -1245,7 +1253,7 @@ export class AuthService {
 
       const user = await this.prisma.user.findUnique({
         where: { id: user_id },
-        select: { id: true },
+        select: { id: true, status: true },
       });
 
       if (!user) {
@@ -1253,6 +1261,14 @@ export class AuthService {
           success: false,
           statusCode: 404,
           message: 'User not found',
+        };
+      }
+
+      if (user.status === 'ACTIVE') {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'User account is already enabled',
         };
       }
 
@@ -1286,7 +1302,6 @@ export class AuthService {
 
       const user = await this.prisma.user.findUnique({
         where: { id: user_id },
-        select: { id: true },
       });
 
       if (!user) {
@@ -1297,10 +1312,25 @@ export class AuthService {
         };
       }
 
-      // Soft delete
+      const timestamp = new Date().getTime();
+
+      // Soft delete and anonymize unique fields to allow re-registration
       await this.prisma.user.update({
         where: { id: user_id },
-        data: { deleted_at: new Date() },
+        data: {
+          deleted_at: new Date(),
+          status: 'INACTIVE',
+          email: user.email ? `deleted_${timestamp}_${user.email}` : undefined,
+          username: user.username
+            ? `deleted_${timestamp}_${user.username}`
+            : undefined,
+          domain: user.domain
+            ? `deleted_${timestamp}_${user.domain}`
+            : undefined,
+          google_id: null,
+          facebook_id: null,
+          apple_id: null,
+        },
       });
 
       return {
@@ -1317,16 +1347,20 @@ export class AuthService {
     }
   }
 
-  async helpSupport(
-    name: string,
-    email: string,
-    subject: string,
-    message: string,
-  ) {
+  async helpSupport(userId: string, subject: string, message: string) {
     try {
+      const user = await UserRepository.getUserDetails(userId);
+      if (!user) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'User not found',
+        };
+      }
+
       await this.mailService.sendSupportRequest({
-        name,
-        email,
+        name: user.name,
+        email: user.email,
         subject,
         message,
       });
