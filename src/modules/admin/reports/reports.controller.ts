@@ -63,16 +63,30 @@ export class ReportsController {
     return this.reportsService.updateStatus(id, body.type, body.status);
   }
 
-  @ApiOperation({ summary: 'Warn user' })
+  @ApiOperation({
+    summary: 'Warn user and send notification to reported & reporter user',
+  })
   @Post('warn')
   async warnUser(@Body() body: WarnUserDto) {
-    return this.reportsService.warnUser(body.userId, body.reasons);
+    return this.reportsService.warnUser(body);
+  }
+
+  @ApiOperation({ summary: 'Remove warning from user' })
+  @Post('remove-warning')
+  async removeWarning(@Body() body: { userId: string }) {
+    return this.reportsService.removeWarning(body.userId);
   }
 
   @ApiOperation({ summary: 'Ban user' })
   @Post('ban')
   async banUser(@Body() body: BanUserDto) {
-    return this.reportsService.banUser(body.userId, body.reason);
+    return this.reportsService.banUser(body);
+  }
+
+  @ApiOperation({ summary: 'Unban user' })
+  @Post('unban')
+  async unbanUser(@Body() body: { userId: string }) {
+    return this.reportsService.unbanUser(body.userId);
   }
 
   @ApiOperation({ summary: 'Send message to user' })

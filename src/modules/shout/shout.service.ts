@@ -15,7 +15,7 @@ export class ShoutService {
     private notificationService: NotificationService,
   ) {}
 
-   private transformShout(shout: any, userId: string) {
+  private transformShout(shout: any, userId: string) {
     const isLiked = shout.likes && shout.likes.length > 0;
 
     try {
@@ -454,7 +454,6 @@ export class ShoutService {
         message: 'Shout liked',
       };
     } catch (error) {
-      // Likely already liked
       return {
         success: false,
         statusCode: 409,
@@ -559,7 +558,7 @@ export class ShoutService {
     }
   }
 
-  async getComments(id: string, page = 1, limit = 20) {
+  async getComments(id: string, userId: string, page = 1, limit = 20) {
     try {
       const skip = (page - 1) * limit;
       const comments = await this.prisma.shoutComment.findMany({
@@ -576,6 +575,13 @@ export class ShoutService {
               avatar: true,
             },
           },
+          likes: { 
+             where: { user_id: userId },
+             select: { id: true }
+          },
+          _count: {
+             select: { likes: true, replies: true }
+          },
           replies: {
             include: {
               user: {
@@ -586,22 +592,167 @@ export class ShoutService {
                   avatar: true,
                 },
               },
+               likes: {
+                where: { user_id: userId },
+                select: { id: true }
+               },
+               _count: {
+                  select: { likes: true }
+               },
             },
+            orderBy: { created_at: 'asc' },
           },
         },
       });
+
+      const transformComment = (comment: any) => ({
+        ...comment,
+        is_liked: comment.likes?.length > 0,
+        likes_count: comment._count?.likes || 0,
+        replies_count: comment._count?.replies || 0,
+        likes: undefined,
+        _count: undefined,
+      });
+
+      const transformedComments = comments.map((comment) => ({
+        ...transformComment(comment),
+        replies: comment.replies?.map((reply) => transformComment(reply)) || [],
+      }));
 
       return {
         success: true,
         statusCode: 200,
         message: 'Comments fetched',
-        data: comments,
+        data: transformedComments,
       };
     } catch (error) {
       return {
         success: false,
         statusCode: 500,
         message: 'Failed to fetch comments',
+      };
+    }
+  }
+
+  async likeComment(commentId: string, userId: string) {
+    try {
+      const comment = await this.prisma.shoutComment.findUnique({
+        where: { id: commentId },
+        select: { id: true, user_id: true, shout_id: true },
+      });
+
+      if (!comment) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Comment not found',
+        };
+      }
+
+      await this.prisma.shoutCommentLike.create({
+        data: {
+          shout_comment_id: commentId,
+          user_id: userId,
+        },
+      });
+
+      // Notification
+      try {
+        if (comment.user_id !== userId) {
+          const liker = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, username: true },
+          });
+          const likerName = liker?.name || liker?.username || 'Someone';
+
+          await this.notificationService.createNotification({
+            sender_id: userId,
+            receiver_id: comment.user_id,
+            text: `${likerName} liked your comment`,
+            type: 'like_comment',
+            entity_id: commentId, // Or shout_id depending on how FE wants to navigate
+          });
+        }
+      } catch (notifError) {
+        console.error('Error sending comment like notification:', notifError);
+      }
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Comment liked',
+      };
+    } catch (error) {
+      if (error.code === 'P2002') {
+         return {
+          success: false,
+          statusCode: 409,
+          message: 'Already liked',
+        };
+      }
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to like comment',
+      };
+    }
+  }
+
+  async unlikeComment(commentId: string, userId: string) {
+    try {
+      await this.prisma.shoutCommentLike.deleteMany({
+        where: {
+          shout_comment_id: commentId,
+          user_id: userId,
+        },
+      });
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Comment unliked',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to unlike comment',
+      };
+    }
+  }
+
+  async deleteComment(commentId: string, userId: string) {
+    try {
+      const comment = await this.prisma.shoutComment.findUnique({
+        where: { id: commentId },
+      });
+      
+      if (!comment) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Comment not found',
+        };
+      }
+
+      if (comment.user_id !== userId) {
+        return {
+          success: false,
+          statusCode: 403,
+          message: 'You are not authorized to delete this comment',
+        };
+      }
+
+      await this.prisma.shoutComment.delete({ where: { id: commentId } });
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Comment deleted',
+      };
+    } catch (error) {
+       return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to delete comment',
       };
     }
   }

@@ -101,6 +101,7 @@ model User {
   shouts         Shout[]
   shout_likes    ShoutLike[]
   shout_comments ShoutComment[]
+  shout_comment_likes ShoutCommentLike[]
   shoutReports   ShoutReport[]
 
   // User Report relations
@@ -645,7 +646,23 @@ model ShoutComment {
   parent    ShoutComment?  @relation("CommentReplies", fields: [parent_id], references: [id])
   replies   ShoutComment[] @relation("CommentReplies")
 
+  likes     ShoutCommentLike[]
+
   @@map("shout_comments")
+}
+
+model ShoutCommentLike {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  shout_comment_id String
+  shout_comment    ShoutComment  @relation(fields: [shout_comment_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, shout_comment_id])
+  @@map("shout_comment_likes")
 }
 
 model ShoutReport {
