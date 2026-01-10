@@ -10,7 +10,6 @@ import { ReportStatus, UserStatus } from '@prisma/client';
 import { NotificationService } from '../../../modules/application/notification/notification.service';
 import { WarnUserDto } from './dto/warn-user.dto';
 import { BanUserDto } from './dto/ban-user.dto';
-import e from 'express';
 
 @Injectable()
 export class ReportsService {
@@ -208,63 +207,156 @@ export class ReportsService {
 
   async findOne(id: string, type: ReportType) {
     try {
-      let report;
       if (type === ReportType.SHOUT) {
-        report = await this.prisma.shoutReport.findUnique({
+        const report = await this.prisma.shoutReport.findUnique({
           where: { id },
-          include: {
+          select: {
+            id: true,
+            created_at: true,
+            updated_at: true,
+            status: true,
+            reason: true,
             user: {
               select: {
                 id: true,
                 name: true,
-                email: true,
                 username: true,
                 avatar: true,
-                status: true,
-                approved_at: true,
-                latitude: true,
-                longitude: true,
-                type: true,
-                _count: { select: { shouts: true, reports_received: true } },
+                _count: {
+                  select: { shouts: true, reports_received: true },
+                },
               },
             },
             shout: {
-              include: {
+              select: {
+                id: true,
+                content: true,
+                created_at: true,
+                medias: {
+                  select: {
+                    id: true,
+                    type: true,
+                    url: true,
+                    duration: true,
+                  },
+                },
                 user: {
-                  include: {
+                  select: {
+                    id: true,
+                    name: true,
+                    username: true,
+                    avatar: true,
                     _count: {
                       select: { shouts: true, reports_received: true },
                     },
                   },
                 },
-                medias: true,
               },
             },
           },
         });
-      } else {
-        report = await this.prisma.userReport.findUnique({
-          where: { id },
-          include: {
-            reporter: {
-              include: {
-                _count: { select: { shouts: true, reports_received: true } },
-              },
-            },
-            reported: {
-              include: {
-                _count: { select: { shouts: true, reports_received: true } },
-              },
+
+        if (!report) {
+          throw new NotFoundException('Report not found');
+        }
+
+        return {
+          id: report.id,
+          type: ReportType.SHOUT,
+          created_at: report.created_at,
+          updated_at: report.updated_at,
+          status: report.status,
+          reason: report.reason,
+          reporter: {
+            id: report.user.id,
+            name: report.user.name,
+            username: report.user.username,
+            avatar: report.user.avatar,
+            stats: {
+              shouts: report.user._count.shouts,
+              reports_received: report.user._count.reports_received,
             },
           },
-        });
+          reported: {
+            id: report.shout.user.id,
+            name: report.shout.user.name,
+            username: report.shout.user.username,
+            avatar: report.shout.user.avatar,
+            stats: {
+              shouts: report.shout.user._count.shouts,
+              reports_received: report.shout.user._count.reports_received,
+            },
+          },
+          shout: {
+            id: report.shout.id,
+            content: report.shout.content,
+            created_at: report.shout.created_at,
+            medias: report.shout.medias,
+          },
+        };
       }
+
+      const report = await this.prisma.userReport.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          created_at: true,
+          updated_at: true,
+          status: true,
+          reason: true,
+          reporter: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+              _count: { select: { shouts: true, reports_received: true } },
+            },
+          },
+          reported: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+              _count: { select: { shouts: true, reports_received: true } },
+            },
+          },
+        },
+      });
 
       if (!report) {
         throw new NotFoundException('Report not found');
       }
 
-      return report;
+      return {
+        id: report.id,
+        type: ReportType.USER,
+        created_at: report.created_at,
+        updated_at: report.updated_at,
+        status: report.status,
+        reason: report.reason,
+        reporter: {
+          id: report.reporter.id,
+          name: report.reporter.name,
+          username: report.reporter.username,
+          avatar: report.reporter.avatar,
+          stats: {
+            shouts: report.reporter._count.shouts,
+            reports_received: report.reporter._count.reports_received,
+          },
+        },
+        reported: {
+          id: report.reported.id,
+          name: report.reported.name,
+          username: report.reported.username,
+          avatar: report.reported.avatar,
+          stats: {
+            shouts: report.reported._count.shouts,
+            reports_received: report.reported._count.reports_received,
+          },
+        },
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -277,9 +369,9 @@ export class ReportsService {
 
   async warnUser(dto: WarnUserDto) {
     const {
-      reporterId,
-      reportedId,
-      message: postMessage,
+      reporterId: reporterIdOverride,
+      reportedId: reportedIdOverride,
+      message: customMessage,
       reasons,
       reportId,
       type,
@@ -287,9 +379,56 @@ export class ReportsService {
     } = dto;
 
     try {
-      if (!reportedId || !reasons || reasons.length === 0) {
+      if (!reasons || reasons.length === 0) {
+        throw new BadRequestException('Reasons are required');
+      }
+
+      // Resolve reporter/reported ids
+      let reporterId: string | undefined = reporterIdOverride;
+      let reportedId: string | undefined = reportedIdOverride;
+      let currentReportStatus: ReportStatus | undefined;
+
+      if (reportId) {
+        if (!type) {
+          throw new BadRequestException(
+            'Report type is required when reportId is provided',
+          );
+        }
+
+        if (type === ReportType.SHOUT) {
+          const report = await this.prisma.shoutReport.findUnique({
+            where: { id: reportId },
+            select: {
+              status: true,
+              user_id: true,
+              shout: { select: { user_id: true } }, // reported shout owner
+            },
+          });
+          if (!report) throw new NotFoundException('Report not found');
+
+          currentReportStatus = report.status;
+          reporterId = reporterId ?? report.user_id;
+          reportedId = reportedId ?? report.shout.user_id;
+        } else {
+          const report = await this.prisma.userReport.findUnique({
+            where: { id: reportId },
+            select: {
+              status: true,
+              reporter_id: true,
+              reported_id: true,
+            },
+          });
+          if (!report) throw new NotFoundException('Report not found');
+
+          currentReportStatus = report.status;
+          reporterId = reporterId ?? report.reporter_id;
+          reportedId = reportedId ?? report.reported_id;
+        }
+      }
+
+      if (!reportedId) {
         throw new BadRequestException(
-          'Reported user ID and reasons are required',
+          'reportedId is required (or provide reportId + type so it can be inferred)',
         );
       }
 
@@ -297,39 +436,10 @@ export class ReportsService {
         throw new BadRequestException('You cannot warn yourself');
       }
 
-      // Check Report Validity first if provided
-      let shouldUpdateReport = false;
-      if (reportId) {
-        if (!type) {
-          throw new BadRequestException(
-            'Report Type is required when Report ID is provided',
-          );
-        }
-
-        let report;
-        if (type === ReportType.SHOUT) {
-          report = await this.prisma.shoutReport.findUnique({
-            where: { id: reportId },
-          });
-        } else {
-          report = await this.prisma.userReport.findUnique({
-            where: { id: reportId },
-          });
-        }
-
-        if (!report) {
-          throw new NotFoundException('Report not found');
-        }
-
-        // If not already resolved, mark for update
-        if (report.status !== ReportStatus.RESOLVED && status) {
-          shouldUpdateReport = true;
-        }
-      }
-
       if (reporterId) {
         const reporter = await this.prisma.user.findUnique({
           where: { id: reporterId },
+          select: { id: true },
         });
         if (!reporter) {
           throw new NotFoundException('Reporter user not found');
@@ -357,7 +467,13 @@ export class ReportsService {
       });
 
       // Update report status if needed
-      if (shouldUpdateReport) {
+      if (
+        reportId &&
+        type &&
+        status &&
+        currentReportStatus &&
+        currentReportStatus !== status
+      ) {
         if (type === ReportType.SHOUT) {
           await this.prisma.shoutReport.update({
             where: { id: reportId },
@@ -372,7 +488,9 @@ export class ReportsService {
       }
 
       // Send notification
-      const message = `You have received a warning for the following reasons: ${reasons.join(', ')}`;
+      const message = customMessage?.trim()
+        ? customMessage.trim()
+        : `You have received a warning for the following reasons: ${reasons.join(', ')}`;
       await this.notificationService.createNotification({
         receiver_id: reportedId,
         type: 'WARNING',
@@ -388,7 +506,11 @@ export class ReportsService {
         });
       }
 
-      return { message: 'User warned successfully' };
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'User warned successfully',
+      };
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -446,21 +568,24 @@ export class ReportsService {
   }
 
   async banUser(dto: BanUserDto) {
-    const { reporterId, reportedId, reason, reportId, type, status } = dto;
+    const {
+      reporterId: reporterIdOverride,
+      reportedId: reportedIdOverride,
+      message: customMessage,
+      reason,
+      reportId,
+      type,
+      status,
+    } = dto;
 
     try {
-      if (!reportedId) {
-        throw new BadRequestException('Reported user ID is required');
-      }
+      // Resolve reporter/reported ids (prefer explicit values; otherwise infer from report)
+      let reporterId: string | undefined = reporterIdOverride;
+      let reportedId: string | undefined = reportedIdOverride;
+      let currentReportStatus: ReportStatus | undefined;
 
-      if (reporterId && reporterId === reportedId) {
-        throw new BadRequestException('You cannot ban yourself');
-      }
-
-      // Check Report Validity first if provided
-      let shouldUpdateReport = false;
       let shoutToBanId: string | null = null;
-      
+
       if (reportId) {
         if (!type) {
           throw new BadRequestException(
@@ -468,30 +593,47 @@ export class ReportsService {
           );
         }
 
-        let report;
         if (type === ReportType.SHOUT) {
-          report = await this.prisma.shoutReport.findUnique({
+          const report = await this.prisma.shoutReport.findUnique({
             where: { id: reportId },
-            select: { id: true, status: true, shout_id: true }
+            select: {
+              status: true,
+              shout_id: true,
+              user_id: true,
+              shout: { select: { user_id: true } },
+            },
           });
-          if (report) {
-            shoutToBanId = report.shout_id;
-          }
+          if (!report) throw new NotFoundException('Report not found');
+
+          currentReportStatus = report.status;
+          shoutToBanId = report.shout_id;
+          reporterId = reporterId ?? report.user_id;
+          reportedId = reportedId ?? report.shout.user_id;
         } else {
-          report = await this.prisma.userReport.findUnique({
+          const report = await this.prisma.userReport.findUnique({
             where: { id: reportId },
-            select: { id: true, status: true }
+            select: {
+              status: true,
+              reporter_id: true,
+              reported_id: true,
+            },
           });
-        }
+          if (!report) throw new NotFoundException('Report not found');
 
-        if (!report) {
-          throw new NotFoundException('Report not found');
+          currentReportStatus = report.status;
+          reporterId = reporterId ?? report.reporter_id;
+          reportedId = reportedId ?? report.reported_id;
         }
+      }
 
-        // If not already resolved, mark for update
-        if (report.status !== ReportStatus.RESOLVED && status) {
-          shouldUpdateReport = true;
-        }
+      if (!reportedId) {
+        throw new BadRequestException(
+          'reportedId is required (or provide reportId + type so it can be inferred)',
+        );
+      }
+
+      if (reporterId && reporterId === reportedId) {
+        throw new BadRequestException('You cannot ban yourself');
       }
 
       if (reporterId) {
@@ -524,12 +666,18 @@ export class ReportsService {
       if (shoutToBanId) {
         await this.prisma.shout.update({
           where: { id: shoutToBanId },
-          data: { deleted_at: new Date() }
+          data: { deleted_at: new Date(), status: 'REMOVED' },
         });
       }
 
       // Update report status if needed
-      if (shouldUpdateReport) {
+      if (
+        reportId &&
+        type &&
+        status &&
+        currentReportStatus &&
+        currentReportStatus !== status
+      ) {
         if (type === ReportType.SHOUT) {
           await this.prisma.shoutReport.update({
             where: { id: reportId },
@@ -544,7 +692,9 @@ export class ReportsService {
       }
 
       // Send notification
-      const message = `Your account has been banned. Reason: ${reason || 'Violation of terms'}`;
+      const message = customMessage?.trim()
+        ? customMessage.trim()
+        : `Your account has been banned. Reason: ${reason || 'Violation of terms'}`;
       await this.notificationService.createNotification({
         receiver_id: reportedId,
         type: 'BAN',
@@ -560,7 +710,11 @@ export class ReportsService {
         });
       }
 
-      return { message: 'User banned successfully' };
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'User banned successfully',
+      };
     } catch (error) {
       if (
         error instanceof NotFoundException ||

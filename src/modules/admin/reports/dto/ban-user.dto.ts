@@ -1,18 +1,23 @@
-import { IsNotEmpty, IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ReportType } from './report-query.dto';
 import { ReportStatus } from '@prisma/client';
 
 export class BanUserDto {
-  @ApiProperty({ description: 'ID of the user being banned' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ description: 'ID of the user being banned (override; normally inferred from reportId+type)' })
+  @IsOptional()
   @IsString()
-  reportedId: string;
+  reportedId?: string;
 
   @ApiPropertyOptional({ description: 'ID of the user who made the report' })
   @IsOptional()
   @IsString()
   reporterId?: string;
+
+  @ApiPropertyOptional({ description: 'Optional custom message for the banned user' })
+  @IsOptional()
+  @IsString()
+  message?: string;
 
   @ApiPropertyOptional({ description: 'Reason for the ban' })
   @IsOptional()

@@ -8,17 +8,13 @@ export class PaymentTransactionService {
   constructor(private prisma: PrismaService) {}
 
   async getAnalytics() {
-    // 1. Total Payment (Sum of all successful transactions)
-    // Assuming 'success' or 'completed' is the status for valid payments. 
-    // If status is null, we might count it or not. Let's assume we count everything for now or filter by 'success' if we knew the enum.
-    // Based on schema, status is String? @default("pending").
-    
+    // 1. Total Payment Amount
     const totalPaymentAgg = await this.prisma.paymentTransaction.aggregate({
       _sum: {
         amount: true,
       },
       where: {
-        status: 'success', // Adjust based on actual data
+        status: 'success',
       },
     });
 
@@ -32,8 +28,6 @@ export class PaymentTransactionService {
     });
 
     // 3. Breakdown by Provider (Debit/Credit, Internet Banking, etc.)
-    // We group by 'provider' or 'withdraw_via' or 'type'. 
-    // Schema has 'provider' (String?).
     const providerStats = await this.prisma.paymentTransaction.groupBy({
       by: ['provider'],
       _sum: {
@@ -47,22 +41,41 @@ export class PaymentTransactionService {
       },
     });
 
-    // Map providers to UI categories if needed, or return as is.
-    // UI has: Debit/Credit Card, Internet Banking, USSD.
-    // We'll return the raw list and let frontend map or we map if we know the values.
-    
+    // 4. total cancelled/refunded payments could be added similarly
+    const cancelledRefundedAgg = await this.prisma.paymentTransaction.aggregate(
+      {
+        _sum: {
+          amount: true,
+        },
+        where: {
+          status: { in: ['cancelled', 'refunded'] },
+        },
+      },
+    );
+
+    const cancelledRefundedUsersCount =
+      await this.prisma.paymentTransaction.groupBy({
+        by: ['user_id'],
+        where: {
+          status: { in: ['cancelled', 'refunded'] },
+          user_id: { not: null },
+        },
+      });
+
     return {
       totalPayment: totalPaymentAgg._sum.amount || 0,
       paidUsers: paidUsersCount.length,
-      breakdown: providerStats.map(stat => ({
+      breakdown: providerStats.map((stat) => ({
         provider: stat.provider || 'Unknown',
         amount: stat._sum.amount || 0,
         users: stat._count.user_id,
       })),
+      totalCancelledRefunded: cancelledRefundedAgg._sum.amount || 0,
+      cancelledRefundedUsers: cancelledRefundedUsersCount.length,
     };
   }
 
-  async  findAll(query: PaymentQueryDto) {
+  async findAll(query: PaymentQueryDto) {
     const { search, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
@@ -93,23 +106,16 @@ export class PaymentTransactionService {
               username: true,
               avatar: true,
               email: true,
-              // subscription: {
-              //   include: {
-              //     plan: true,
-              //   },
-              // },
             },
           },
         },
       }),
     ]);
 
-    // Fetch subscriptions manually because the relation might not be set on User side
-    // but Subscription has userId string field.
     const userIds = transactions
       .map((t) => t.user_id)
       .filter((id) => id !== null) as string[];
-      
+
     const subscriptions = await this.prisma.subscription.findMany({
       where: {
         userId: { in: userIds },
@@ -135,12 +141,21 @@ export class PaymentTransactionService {
         status: tx.status, // Transaction status
         amount: tx.amount,
         currency: tx.currency,
+        provider: tx.provider,
+        type: tx.type,
         user: {
+          id: tx.user?.id,
           name: tx.user?.name,
           username: tx.user?.username,
           avatar: tx.user?.avatar,
+          email: tx.user?.email,
         },
-        paymentPlan: sub?.plan?.name || 'N/A', // Current plan
+        plan: {
+          name: sub?.plan?.name || 'N/A',
+          interval: sub?.plan?.interval || 'N/A',
+          price: sub?.plan?.price || 0,
+        },
+        // paymentPlan: sub?.plan?.name || 'N/A', // Current plan
         subscriptionStatus: sub?.isActive ? 'Active' : 'Inactive',
       };
     });

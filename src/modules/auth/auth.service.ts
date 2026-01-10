@@ -441,26 +441,35 @@ export class AuthService {
 
   async login({ email, userId, latitude, longitude }) {
     try {
-      // Check location
-      if (latitude === undefined || longitude === undefined) {
-        throw new ForbiddenException('Location coordinates are required.');
+      const user = await UserRepository.getUserDetails(userId);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
       }
-      const isAllowed = await LocationService.isLocationAllowed(
-        latitude,
-        longitude,
-      );
-      if (!isAllowed) {
-        throw new ForbiddenException(
-          'Access restricted to Bangladesh and Nigeria only.',
+
+      const isAdminUser = !!user.type && user.type.toLowerCase().includes('admin');
+
+      // Check location for regular users only
+      if (!isAdminUser) {
+        if (latitude === undefined || longitude === undefined) {
+          throw new ForbiddenException('Location coordinates are required.');
+        }
+
+        const isAllowed = await LocationService.isLocationAllowed(
+          latitude,
+          longitude,
         );
+
+        if (!isAllowed) {
+          throw new ForbiddenException(
+            'Access restricted to Bangladesh and Nigeria only.',
+          );
+        }
       }
 
       const payload = { email: email, sub: userId };
 
       const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-
-      const user = await UserRepository.getUserDetails(userId);
 
       // store refreshToken
       await this.redis.set(
@@ -613,19 +622,6 @@ export class AuthService {
     longitude?: number,
   ) {
     try {
-      // Check location if provided (Mobile App Re-open Scenario)
-      if (latitude !== undefined && longitude !== undefined) {
-        const isAllowed = await LocationService.isLocationAllowed(
-          latitude,
-          longitude,
-        );
-        if (!isAllowed) {
-          throw new ForbiddenException(
-            'Access restricted to Bangladesh and Nigeria only.',
-          );
-        }
-      }
-
       const storedToken = await this.redis.get(`refresh_token:${user_id}`);
 
       if (!storedToken || storedToken != refreshToken) {
@@ -651,6 +647,23 @@ export class AuthService {
           statusCode: 404,
           message: 'User not found',
         };
+      }
+
+      const isAdminUser =
+        !!userDetails.type && userDetails.type.toLowerCase().includes('admin');
+
+      // Check location for regular users only (Mobile App Re-open Scenario)
+      if (!isAdminUser && latitude !== undefined && longitude !== undefined) {
+        const isAllowed = await LocationService.isLocationAllowed(
+          latitude,
+          longitude,
+        );
+
+        if (!isAllowed) {
+          throw new ForbiddenException(
+            'Access restricted to Bangladesh and Nigeria only.',
+          );
+        }
       }
 
       const payload = { email: userDetails.email, sub: userDetails.id };
