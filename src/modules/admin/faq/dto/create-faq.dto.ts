@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
 
 export interface IFaq {
   id?: string;
@@ -23,6 +24,9 @@ export class CreateFaqDto {
   })
   answer: string;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   @ApiProperty({
     description: 'Sort order',
     example: 1,
@@ -32,6 +36,8 @@ export class CreateFaqDto {
 
 export class BatchCreateFaqDto {
   // batch create
+  @IsOptional()
+  @IsArray()
   @ApiProperty({
     description: 'Faq data array',
     example: [

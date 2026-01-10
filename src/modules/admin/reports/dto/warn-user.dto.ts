@@ -1,20 +1,20 @@
-import { IsArray, IsNotEmpty, IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsArray, IsOptional, IsString, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ReportType } from './report-query.dto';
 import { ReportStatus } from '@prisma/client';
 
 export class WarnUserDto {
-  @ApiProperty({ description: 'ID of the user being reported/warned' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ description: 'ID of the user being warned (override; normally inferred from reportId+type)' })
+  @IsOptional()
   @IsString()
-  reportedId: string;
+  reportedId?: string;
 
-  @ApiPropertyOptional({ description: 'ID of the user who made the report' })
+  @ApiPropertyOptional({ description: 'ID of the reporting user (override; normally inferred from reportId+type)' })
   @IsOptional()
   @IsString()
   reporterId?: string;
 
-  @ApiPropertyOptional({ description: 'Message to be included in notification' })
+  @ApiPropertyOptional({ description: 'Optional custom message for the warned user' })
   @IsOptional()
   @IsString()
   message?: string;
