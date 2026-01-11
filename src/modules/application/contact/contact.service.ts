@@ -22,12 +22,14 @@ export class ContactService {
       const firstName = user?.first_name || 'Guest';
       const lastName = user?.last_name || 'User';
       const email = user?.email || 'guest@example.com';
+      const phone_number = user?.phone_number || null;
 
       await this.prisma.contact.create({
         data: {
           first_name: firstName,
           last_name: lastName,
           email: email,
+          phone_number: phone_number,
           message: createContactDto.message,
         },
       });

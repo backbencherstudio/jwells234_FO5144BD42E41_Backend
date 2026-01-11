@@ -446,7 +446,8 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      const isAdminUser = !!user.type && user.type.toLowerCase().includes('admin');
+      const isAdminUser =
+        !!user.type && user.type.toLowerCase().includes('admin');
 
       // Check location for regular users only
       if (!isAdminUser) {
@@ -1370,6 +1371,16 @@ export class AuthService {
           message: 'User not found',
         };
       }
+
+      await this.prisma.supportRequest.create({
+        data: {
+          user_id: userId,
+          name: user.name,
+          email: user.email,
+          subject,
+          message,
+        },
+      });
 
       await this.mailService.sendSupportRequest({
         name: user.name,
