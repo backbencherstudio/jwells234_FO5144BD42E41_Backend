@@ -98,11 +98,11 @@ model User {
   subscriptionId String?
 
   // Shout relations
-  shouts         Shout[]
-  shout_likes    ShoutLike[]
-  shout_comments ShoutComment[]
+  shouts              Shout[]
+  shout_likes         ShoutLike[]
+  shout_comments      ShoutComment[]
   shout_comment_likes ShoutCommentLike[]
-  shoutReports   ShoutReport[]
+  shoutReports        ShoutReport[]
 
   // User Report relations
   reports_made     UserReport[] @relation("reporter")
@@ -488,6 +488,29 @@ model Contact {
   @@map("contacts")
 }
 
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model SupportRequest {
+  id         String         @id @default(cuid())
+  created_at DateTime       @default(now())
+  updated_at DateTime       @default(now())
+  deleted_at DateTime?
+  status     SupportStatus? @default(OPEN)
+
+  user_id String?
+  name    String?
+  email   String?
+  subject String?
+  message String?
+
+  @@map("support_requests")
+}
+
 model SocialMedia {
   id         String    @id @default(cuid())
   created_at DateTime  @default(now())
@@ -647,7 +670,7 @@ model ShoutComment {
   parent    ShoutComment?  @relation("CommentReplies", fields: [parent_id], references: [id])
   replies   ShoutComment[] @relation("CommentReplies")
 
-  likes     ShoutCommentLike[]
+  likes ShoutCommentLike[]
 
   @@map("shout_comments")
 }
@@ -660,7 +683,7 @@ model ShoutCommentLike {
   user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   shout_comment_id String
-  shout_comment    ShoutComment  @relation(fields: [shout_comment_id], references: [id], onDelete: Cascade)
+  shout_comment    ShoutComment @relation(fields: [shout_comment_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, shout_comment_id])
   @@map("shout_comment_likes")
