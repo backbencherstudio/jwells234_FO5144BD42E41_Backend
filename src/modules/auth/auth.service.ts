@@ -204,10 +204,8 @@ export class AuthService {
 
   async me(userId: string) {
     try {
-      const user = await this.prisma.user.findFirst({
-        where: {
-          id: userId,
-        },
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
         select: {
           id: true,
           name: true,
@@ -232,19 +230,50 @@ export class AuthService {
         };
       }
 
-      if (user) {
-        return {
-          success: true,
-          statusCode: 200,
-          data: user,
-        };
-      } else {
-        return {
-          success: false,
-          statusCode: 404,
-          message: 'User not found',
-        };
-      }
+      // Include current active subscription + minimal plan details
+      const subscription = await this.prisma.subscription.findFirst({
+        where: {
+          userId: userId,
+          // OR: [
+          //   { isActive: true },
+          //   {
+          //     status: {
+          //       equals: 'active',
+          //       mode: 'insensitive',
+          //     },
+          //   },
+          // ],
+        },
+        select: {
+          id: true,
+          status: true,
+          isActive: true,
+          type: true,
+          plan: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              price: true,
+              currency: true,
+              interval: true,
+              intervalCount: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return {
+        success: true,
+        statusCode: 200,
+        data: {
+          ...user,
+          subscription: subscription || null,
+        },
+      };
     } catch (error) {
       return {
         success: false,
