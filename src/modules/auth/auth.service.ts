@@ -234,21 +234,17 @@ export class AuthService {
       const subscription = await this.prisma.subscription.findFirst({
         where: {
           userId: userId,
-          // OR: [
-          //   { isActive: true },
-          //   {
-          //     status: {
-          //       equals: 'active',
-          //       mode: 'insensitive',
-          //     },
-          //   },
-          // ],
+          // status: 'active',
+        },
+        orderBy: {
+          startDate: 'desc',
         },
         select: {
           id: true,
           status: true,
           isActive: true,
           type: true,
+          remainingDays: true,
           plan: {
             select: {
               id: true,
@@ -261,10 +257,8 @@ export class AuthService {
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
       });
+
 
       return {
         success: true,
