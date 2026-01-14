@@ -24,6 +24,7 @@ import { PaystackPayment } from '../../common/lib/Payment/paystack/PaystackPayme
 import { StringHelper } from '../../common/helper/string.helper';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LocationService } from '../../common/lib/LocationService';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -234,17 +235,21 @@ export class AuthService {
       const subscription = await this.prisma.subscription.findFirst({
         where: {
           userId: userId,
-          // status: 'active',
-        },
-        orderBy: {
-          startDate: 'desc',
+          // OR: [
+          //   { isActive: true },
+          //   {
+          //     status: {
+          //       equals: 'active',
+          //       mode: 'insensitive',
+          //     },
+          //   },
+          // ],
         },
         select: {
           id: true,
           status: true,
           isActive: true,
           type: true,
-          remainingDays: true,
           plan: {
             select: {
               id: true,
@@ -257,8 +262,10 @@ export class AuthService {
             },
           },
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
-
 
       return {
         success: true,
@@ -677,16 +684,26 @@ export class AuthService {
         !!userDetails.type && userDetails.type.toLowerCase().includes('admin');
 
       // Check location for regular users only (Mobile App Re-open Scenario)
-      if (!isAdminUser && latitude !== undefined && longitude !== undefined) {
+      if (!isAdminUser) {
+        if (latitude === undefined || longitude === undefined) {
+          return {
+            success: false,
+            statusCode: 403,
+            message: 'Location coordinates are required.',
+          };
+        }
+
         const isAllowed = await LocationService.isLocationAllowed(
           latitude,
           longitude,
         );
 
         if (!isAllowed) {
-          throw new ForbiddenException(
-            'Access restricted to Bangladesh and Nigeria only.',
-          );
+          return {
+            success: false,
+            statusCode: 403,
+            message: 'Access restricted to Bangladesh and Nigeria only.',
+          };
         }
       }
 
@@ -1473,4 +1490,261 @@ export class AuthService {
       };
     }
   }
+
+
+//  =====================================================================
+  async handleGoogleProfile(input: {
+    googleId: string;
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    avatar?: string | null;
+    latitude?: number;
+    longitude?: number;
+  }) {
+    const googleId = input.googleId;
+    const email = input.email?.toLowerCase?.() ?? undefined;
+    const firstName = input.firstName ?? undefined;
+    const lastName = input.lastName ?? undefined;
+    const avatar = input.avatar ?? undefined;
+    const latitude = input.latitude;
+    const longitude = input.longitude;
+
+    if (!googleId) {
+      throw new HttpException('googleId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    const makeUsername = (): string | null => {
+      const baseFromEmail = email?.split('@')?.[0];
+      const base = (baseFromEmail || [firstName, lastName].filter(Boolean).join(''))
+        .toLowerCase();
+      const sanitized = base.replace(/[^a-z0-9_\.\-]/g, '');
+      return sanitized || null;
+    };
+
+    // 1) Try by google_id first
+    let user = await this.prisma.user.findUnique({
+      where: { google_id: googleId },
+    });
+
+    // 2) If not found, try by email and link google_id
+    if (!user && email) {
+      const byEmail = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (byEmail) {
+        const enrichData: Prisma.UserUpdateInput = {
+          google_id: byEmail.google_id ?? googleId,
+          first_name: byEmail.first_name ?? firstName,
+          last_name: byEmail.last_name ?? lastName,
+          name:
+            byEmail.name ??
+            (([firstName, lastName].filter(Boolean).join(' ').trim()) || null),
+          avatar: byEmail.avatar ?? avatar,
+          email_verified_at: byEmail.email_verified_at ?? new Date(),
+        };
+
+        if (!byEmail.username) {
+          const candidate = makeUsername();
+          if (candidate) {
+            enrichData.username = candidate;
+          }
+        }
+
+        try {
+          user = await this.prisma.user.update({
+            where: { id: byEmail.id },
+            data: enrichData,
+          });
+        } catch (e: any) {
+          // If username is taken, retry without setting username
+          if (
+            e?.code === 'P2002' &&
+            Array.isArray(e?.meta?.target) &&
+            e.meta.target.includes('username')
+          ) {
+            delete enrichData.username;
+            user = await this.prisma.user.update({
+              where: { id: byEmail.id },
+              data: enrichData,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
+    // 3) If still not found, create a new user
+    if (!user) {
+      const baseData: Prisma.UserCreateInput = {
+        google_id: googleId,
+        email: email,
+        first_name: firstName,
+        last_name: lastName,
+        name: ([firstName, lastName].filter(Boolean).join(' ').trim()) || null,
+        avatar: avatar,
+        email_verified_at: email ? new Date() : undefined,
+      };
+
+      const candidate = makeUsername();
+      if (candidate) {
+        baseData.username = candidate;
+      }
+
+      try {
+        user = await this.prisma.user.create({ data: baseData });
+      } catch (e: any) {
+        if (
+          e?.code === 'P2002' &&
+          Array.isArray(e?.meta?.target) &&
+          e.meta.target.includes('username')
+        ) {
+          // Retry creation without username to avoid collision
+          delete baseData.username;
+          user = await this.prisma.user.create({ data: baseData });
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    // IMPORTANT: For mobile login, enforce the same geo rules as normal login.
+    const loginResponse = await this.login({
+      email: user.email,
+      userId: user.id,
+      latitude,
+      longitude,
+    });
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: loginResponse?.message ?? 'Logged in successfully',
+      authorization: loginResponse?.authorization,
+      type: loginResponse?.type ?? user?.type,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        avatar: user.avatar,
+      },
+    };
+  }
+
+  async handleAppleProfile(input: {
+    appleId: string;
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    latitude?: number;
+    longitude?: number;
+  }) {
+    const appleId = input.appleId;
+    const email = input.email?.toLowerCase?.() ?? undefined;
+    const firstName = input.firstName ?? undefined;
+    const lastName = input.lastName ?? undefined;
+    const latitude = input.latitude;
+    const longitude = input.longitude;
+
+    if (!appleId) {
+      throw new HttpException('appleId is required', HttpStatus.BAD_REQUEST);
+    }
+
+    // 1) Try by apple_id first
+    let user = await this.prisma.user.findUnique({
+      where: { apple_id: appleId },
+    });
+
+    // 2) If not found, try by email and link apple_id (best effort)
+    if (!user && email) {
+      const byEmail = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (byEmail) {
+        const enrichData: Prisma.UserUpdateInput = {
+          apple_id: byEmail.apple_id ?? appleId,
+          first_name: byEmail.first_name ?? firstName,
+          last_name: byEmail.last_name ?? lastName,
+          name:
+            byEmail.name ??
+            (([firstName, lastName].filter(Boolean).join(' ').trim()) || null),
+          email_verified_at: byEmail.email_verified_at ?? new Date(),
+        };
+
+        user = await this.prisma.user.update({
+          where: { id: byEmail.id },
+          data: enrichData,
+        });
+      }
+    }
+
+    // 3) If still not found, create a new user
+    if (!user) {
+      // Apple may not provide email after the first login.
+      // Create a stable synthetic email so downstream JWT payload + app logic remain consistent.
+      const resolvedEmail = email ?? `apple_${appleId}@appleid.local`;
+
+      const baseData: Prisma.UserCreateInput = {
+        apple_id: appleId,
+        email: resolvedEmail,
+        first_name: firstName,
+        last_name: lastName,
+        name: ([firstName, lastName].filter(Boolean).join(' ').trim()) || null,
+        email_verified_at: new Date(),
+      };
+
+      // username best-effort (optional)
+      const baseUsername =
+        resolvedEmail.split('@')[0]?.toLowerCase?.().replace(/[^a-z0-9_\.\-]/g, '') ||
+        null;
+      if (baseUsername) {
+        baseData.username = baseUsername;
+      }
+
+      try {
+        user = await this.prisma.user.create({ data: baseData });
+      } catch (e: any) {
+        if (
+          e?.code === 'P2002' &&
+          Array.isArray(e?.meta?.target) &&
+          e.meta.target.includes('username')
+        ) {
+          // Retry without username
+          delete baseData.username;
+          user = await this.prisma.user.create({ data: baseData });
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    const loginResponse = await this.login({
+      email: user.email,
+      userId: user.id,
+      latitude,
+      longitude,
+    });
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: loginResponse?.message ?? 'Logged in successfully',
+      authorization: loginResponse?.authorization,
+      type: loginResponse?.type ?? user?.type,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        avatar: user.avatar,
+      },
+    };
+  }
+
+
+
 }

@@ -6,6 +6,7 @@ import { UserRepository } from '../../../common/repository/user/user.repository'
 import appConfig from '../../../config/app.config';
 import { SazedStorage } from '../../../common/lib/Disk/SazedStorage';
 import { DateHelper } from '../../../common/helper/date.helper';
+import { UserStatus } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -38,10 +39,16 @@ export class UserService {
     q,
     type,
     approved,
+    status,
+    page = 1,
+    limit = 20,
   }: {
     q?: string;
     type?: string;
     approved?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
   }) {
     try {
       const where_condition = {};
@@ -61,26 +68,54 @@ export class UserService {
           approved == 'approved' ? { not: null } : { equals: null };
       }
 
-      const users = await this.prisma.user.findMany({
-        where: {
-          ...where_condition,
-        },
-        orderBy: { created_at: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          avatar: true,
-          username: true,
-          email: true,
-          phone_number: true,
-          address: true,
-          type: true,
-          status: true,
-          approved_at: true,
-          created_at: true,
-          updated_at: true,
-        },
-      });
+      if (status) {
+        const normalized = String(status).trim().toUpperCase();
+        const allowed = new Set<string>(Object.values(UserStatus));
+        if (!allowed.has(normalized)) {
+          return {
+            success: false,
+            statusCode: 400,
+            message: `Invalid status. Allowed: ${Object.values(UserStatus).join(', ')}`,
+          };
+        }
+        where_condition['status'] = normalized;
+      }
+
+      const safePage = Number.isFinite(page) && page > 0 ? page : 1;
+      const safeLimit = Number.isFinite(limit)
+        ? Math.min(100, Math.max(1, limit))
+        : 20;
+      const skip = (safePage - 1) * safeLimit;
+
+      const [total, users] = await Promise.all([
+        this.prisma.user.count({
+          where: {
+            ...where_condition,
+          },
+        }),
+        this.prisma.user.findMany({
+          where: {
+            ...where_condition,
+          },
+          orderBy: { created_at: 'desc' },
+          skip,
+          take: safeLimit,
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            username: true,
+            email: true,
+            phone_number: true,
+            address: true,
+            type: true,
+            status: true,
+            approved_at: true,
+            created_at: true,
+            updated_at: true,
+          },
+        }),
+      ]);
 
       // check user premium or free
       for (const user of users) {
@@ -104,9 +139,19 @@ export class UserService {
         }
       }
 
+      const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+
       return {
         success: true,
         data: users,
+        meta: {
+          page: safePage,
+          limit: safeLimit,
+          total,
+          totalPages,
+          hasPrev: safePage > 1,
+          hasNext: safePage < totalPages,
+        },
       };
     } catch (error) {
       return {
@@ -116,7 +161,13 @@ export class UserService {
     }
   }
 
-  async getUserById(id: string) {
+  async getUserById(
+    id: string,
+    opts?: {
+      shoutPage?: number;
+      shoutLimit?: number;
+    },
+  ) {
     try {
       if (!id) {
         return {
@@ -175,36 +226,65 @@ export class UserService {
         );
       }
 
-      const shouts = await this.prisma.shout.findMany({
-        where: {
-          user_id: id,
-        },
-        orderBy: { created_at: 'desc' },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              avatar: true,
+      const shoutPage =
+        opts?.shoutPage && Number.isFinite(opts.shoutPage) && opts.shoutPage > 0
+          ? opts.shoutPage
+          : 1;
+      const shoutLimit =
+        opts?.shoutLimit && Number.isFinite(opts.shoutLimit)
+          ? Math.min(50, Math.max(1, opts.shoutLimit))
+          : 10;
+      const shoutSkip = (shoutPage - 1) * shoutLimit;
+
+      const shoutWhere = {
+        user_id: id,
+      };
+
+      const [shoutsTotal, shouts] = await Promise.all([
+        this.prisma.shout.count({
+          where: shoutWhere,
+        }),
+        this.prisma.shout.findMany({
+          where: shoutWhere,
+          orderBy: { created_at: 'desc' },
+          skip: shoutSkip,
+          take: shoutLimit,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                avatar: true,
+              },
+            },
+            medias: true,
+            _count: {
+              select: {
+                likes: true,
+                comments: true,
+                shares: true,
+              },
+            },
+            likes: {
+              where: { user_id: id },
+              select: { id: true },
             },
           },
-          medias: true,
-          _count: {
-            select: {
-              likes: true,
-              comments: true,
-              shares: true,
-            },
-          },
-          likes: {
-            where: { user_id: id },
-            select: { id: true },
-          },
-        },
-      });
+        }),
+      ]);
+
+      const shoutsTotalPages = Math.max(1, Math.ceil(shoutsTotal / shoutLimit));
 
       user['shouts'] = shouts;
+      user['shouts_meta'] = {
+        page: shoutPage,
+        limit: shoutLimit,
+        total: shoutsTotal,
+        totalPages: shoutsTotalPages,
+        hasPrev: shoutPage > 1,
+        hasNext: shoutPage < shoutsTotalPages,
+      };
 
       return {
         success: true,
