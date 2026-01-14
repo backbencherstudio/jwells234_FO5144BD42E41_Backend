@@ -30,8 +30,10 @@ import appConfig from '../../config/app.config';
 import { AuthGuard } from '@nestjs/passport';
 import { AppleAuthGuard } from './guards/apple-auth.guard';
 import { GetUser } from './decorators/get-user.decorator';
+import { GoogleMobileDto } from './dto/google-mobile.dto';
 
 import { LocationGuard } from '../../common/guard/location.guard';
+import { AppleMobileDto } from './dto/apple-mobile.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -648,29 +650,31 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Halp support' })
-  @UseGuards(JwtAuthGuard)
-  @Post('ask-help-support')
+  @Post('help-support')
   async helpSupport(
     @GetUser() user,
     @Body()
     data: {
+      name: string;
+      email: string;
       subject: string;
       message: string;
     },
     @Res() res: Response,
   ) {
     try {
-      const userId = user.userId;
+      const name = user.name;
+      const email = user.email;
+
       const subject = data.subject;
       const message = data.message;
 
-      if (!userId) {
-        throw new HttpException(
-          'User ID not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
+      if (!name) {
+        throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
       }
-
+      if (!email) {
+        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
+      }
       if (!message) {
         throw new HttpException(
           'Message not provided',
@@ -679,7 +683,7 @@ export class AuthController {
       }
 
       const response = await this.authService.helpSupport(
-        userId,
+        email,
         subject,
         message,
       );
@@ -725,5 +729,30 @@ export class AuthController {
     } catch (error) {
       return this.sendError(res, error, 'Failed to report user');
     }
+  }
+
+  // ======================================== mobile only google login (Flutter) ==============================================
+  @ApiOperation({ summary: 'Google login (mobile - Flutter idToken)' })
+  @Post('google/mobile')
+  @UseGuards(AuthGuard('google-mobile'))
+  async googleMobile(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() _body: GoogleMobileDto,
+  ) {
+    // Strategy returns final payload as req.user
+    return this.sendResponse(res, req.user);
+  }
+
+  @ApiOperation({ summary: 'Apple login (mobile - Flutter identityToken)' })
+  @Post('apple/mobile')
+  @UseGuards(AuthGuard('apple-mobile'))
+  async appleMobile(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Body() _body: AppleMobileDto,
+  ) {
+    // Strategy returns final payload as req.user
+    return this.sendResponse(res, req.user);
   }
 }

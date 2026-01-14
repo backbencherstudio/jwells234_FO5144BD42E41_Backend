@@ -672,6 +672,8 @@ model ShoutComment {
 
   likes ShoutCommentLike[]
 
+  @@index([shout_id])
+  @@index([parent_id])
   @@map("shout_comments")
 }
 

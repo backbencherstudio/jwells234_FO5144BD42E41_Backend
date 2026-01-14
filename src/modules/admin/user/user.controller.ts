@@ -59,18 +59,34 @@ export class UserController {
   @ApiResponse({ description: 'Get all users' })
   @Get()
   async getAllUsers(
-    @Query() query: { q?: string; type?: string; approved?: string },
+    @Query()
+    query: {
+      q?: string;
+      type?: string;
+      approved?: string;
+      status?: string;
+      page?: string;
+      limit?: string;
+    },
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
       const q = query.q;
       const type = query.type;
       const approved = query.approved;
+      const status = query.status;
+
+      const page = Math.max(1, parseInt(query.page ?? '1', 10) || 1);
+      const limitRaw = parseInt(query.limit ?? '20', 10) || 20;
+      const limit = Math.min(100, Math.max(1, limitRaw));
 
       const users: any = await this.userService.getAllUsers({
         q,
         type,
         approved,
+        status,
+        page,
+        limit,
       });
       if (users.statusCode) {
         res.status(users.statusCode);
@@ -158,9 +174,27 @@ export class UserController {
 
   @ApiResponse({ description: 'Get a user by id' })
   @Get(':id')
-  async getUserById(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+  async getUserById(
+    @Param('id') id: string,
+    @Query()
+    query: {
+      shout_page?: string;
+      shout_limit?: string;
+    },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     try {
-      const user: any = await this.userService.getUserById(id);
+      const shoutPage = Math.max(
+        1,
+        parseInt(query.shout_page ?? '1', 10) || 1,
+      );
+      const shoutLimitRaw = parseInt(query.shout_limit ?? '10', 10) || 10;
+      const shoutLimit = Math.min(50, Math.max(1, shoutLimitRaw));
+
+      const user: any = await this.userService.getUserById(id, {
+        shoutPage,
+        shoutLimit,
+      });
       if (user.statusCode) {
         res.status(user.statusCode);
       }

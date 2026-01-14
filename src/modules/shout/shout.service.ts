@@ -190,31 +190,35 @@ export class ShoutService {
       orderBy: { created_at: 'desc' },
       include: {
         user: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            avatar: true,
-          },
+          select: { id: true, name: true, username: true, avatar: true },
         },
         medias: true,
-        _count: {
-          select: {
-            likes: true,
-            comments: true,
-            shares: true,
+        _count: { select: { likes: true, comments: true, shares: true } },
+        likes: { where: { user_id: userId }, select: { id: true } },
+        // 1️⃣ Include original shout if this shout is a share
+        original_shout: {
+          include: {
+            user: {
+              select: { id: true, name: true, username: true, avatar: true },
+            },
+            medias: true,
+            _count: { select: { likes: true, comments: true, shares: true } },
+            likes: { where: { user_id: userId }, select: { id: true } },
           },
-        },
-        likes: {
-          where: { user_id: userId },
-          select: { id: true },
         },
       },
     });
 
-    const transformedShouts = shouts.map((shout) =>
-      this.transformShout(shout, userId),
-    );
+    const transformedShouts = shouts.map((shout) => {
+      const transformed = this.transformShout(shout, userId);
+      if (shout.original_shout) {
+        transformed.original_shout = this.transformShout(
+          shout.original_shout,
+          userId,
+        );
+      }
+      return transformed;
+    });
 
     return {
       success: true,
@@ -314,49 +318,62 @@ export class ShoutService {
     };
   }
 
-  async getPostById(id: string, userId: string) {
-    const shout = await this.prisma.shout.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            avatar: true,
-          },
-        },
-        medias: true,
-        _count: {
-          select: {
-            likes: true,
-            comments: true,
-            shares: true,
-          },
-        },
-        likes: {
-          where: { user_id: userId },
-          select: { id: true },
+async getPostById(id: string, userId: string) {
+  const shout = await this.prisma.shout.findUnique({
+    where: { id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          avatar: true,
         },
       },
-    });
+      medias: true,
+      _count: {
+        select: {
+          likes: true,
+          comments: true,
+          shares: true,
+        },
+      },
+      likes: {
+        where: { user_id: userId },
+        select: { id: true },
+      },
+      original_shout: {
+        include: {
+          user: { select: { id: true, name: true, username: true, avatar: true } },
+          medias: true,
+          _count: { select: { likes: true, comments: true, shares: true } },
+          likes: { where: { user_id: userId }, select: { id: true } },
+        },
+      },
+    },
+  });
 
-    if (!shout) {
-      return {
-        success: false,
-        statusCode: 404,
-        message: 'Shout not found',
-      };
-    }
-
-    const transformedShout = this.transformShout(shout, userId);
-
+  if (!shout) {
     return {
-      success: true,
-      statusCode: 200,
-      data: transformedShout,
+      success: false,
+      statusCode: 404,
+      message: 'Shout not found',
     };
   }
+
+  const transformedShout = this.transformShout(shout, userId);
+
+  if (shout.original_shout) {
+    transformedShout.original_shout = this.transformShout(shout.original_shout, userId);
+  }
+
+  return {
+    success: true,
+    statusCode: 200,
+    data: transformedShout,
+  };
+}
+
 
   async updatePost(id: string, userId: string, updateShoutDto: UpdateShoutDto) {
     try {
@@ -561,75 +578,173 @@ export class ShoutService {
   async getComments(id: string, userId: string, page = 1, limit = 20) {
     try {
       const skip = (page - 1) * limit;
-      const comments = await this.prisma.shoutComment.findMany({
-        where: { shout_id: id, parent_id: null }, // Top level comments
+
+      // 1️⃣ Get top-level comment IDs
+      const topLevelComments = await this.prisma.shoutComment.findMany({
+        where: { shout_id: id, parent_id: null, deleted_at: null },
+        orderBy: { created_at: 'desc' },
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        select: { id: true },
+      });
+
+      const topLevelIds = topLevelComments.map((c) => c.id);
+
+      if (topLevelIds.length === 0) {
+        return {
+          success: true,
+          statusCode: 200,
+          message: 'No comments found',
+          data: [],
+          total_count: 0,
+        };
+      }
+
+      // 2️⃣ Fetch all comments for these threads (top-level + all nested)
+      const allComments = await this.prisma.shoutComment.findMany({
+        where: {
+          shout_id: id,
+          OR: [{ id: { in: topLevelIds } }, { parent_id: { not: null } }],
+          deleted_at: null,
+        },
+        orderBy: { created_at: 'asc' },
         include: {
           user: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              avatar: true,
-            },
+            select: { id: true, name: true, username: true, avatar: true },
           },
-          likes: { 
-             where: { user_id: userId },
-             select: { id: true }
-          },
-          _count: {
-             select: { likes: true, replies: true }
-          },
-          replies: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  username: true,
-                  avatar: true,
-                },
-              },
-               likes: {
-                where: { user_id: userId },
-                select: { id: true }
-               },
-               _count: {
-                  select: { likes: true }
-               },
-            },
-            orderBy: { created_at: 'asc' },
-          },
+          likes: { where: { user_id: userId }, select: { id: true } },
         },
       });
 
-      const transformComment = (comment: any) => ({
-        ...comment,
-        is_liked: comment.likes?.length > 0,
-        likes_count: comment._count?.likes || 0,
-        replies_count: comment._count?.replies || 0,
-        likes: undefined,
-        _count: undefined,
+      // 3️⃣ Normalize comments
+      const map = new Map<string, any>();
+      const roots: any[] = [];
+
+      allComments.forEach((c) => {
+        map.set(c.id, {
+          ...c,
+          is_liked: c.likes.length > 0,
+          likes_count: c.likes.length,
+          replies: [],
+          replies_count: 0, // will calculate recursively
+          likes: undefined,
+        });
       });
 
-      const transformedComments = comments.map((comment) => ({
-        ...transformComment(comment),
-        replies: comment.replies?.map((reply) => transformComment(reply)) || [],
-      }));
+      // 4️⃣ Build tree and count nested replies recursively
+      function calculateReplies(comment) {
+        let count = 0;
+        for (const child of comment.replies) {
+          count += 1 + calculateReplies(child);
+        }
+        comment.replies_count = count;
+        return count;
+      }
+
+      // Build tree
+      map.forEach((comment) => {
+        if (comment.parent_id) {
+          const parent = map.get(comment.parent_id);
+          if (parent) parent.replies.push(comment);
+        } else {
+          roots.push(comment);
+        }
+      });
+
+      // Calculate nested replies count for top-level comments
+      roots.forEach(calculateReplies);
+
+      // 5️⃣ Total shout comment count (all top-level + nested)
+      const totalCommentCount = roots.reduce(
+        (acc, c) => acc + 1 + c.replies_count,
+        0,
+      );
 
       return {
         success: true,
         statusCode: 200,
         message: 'Comments fetched',
-        data: transformedComments,
+        total_count: totalCommentCount,
+        data: roots.map((c) => ({
+          ...c,
+          replies: [], // hide replies for now
+        })),
       };
     } catch (error) {
+      console.error(error);
       return {
         success: false,
         statusCode: 500,
         message: 'Failed to fetch comments',
+      };
+    }
+  }
+
+  async getCommentReplies(
+    commentId: string,
+    userId: string,
+    page = 1,
+    limit = 10,
+  ) {
+    try {
+      const skip = (page - 1) * limit;
+
+      // Ensure parent comment exists
+      const parent = await this.prisma.shoutComment.findUnique({
+        where: { id: commentId, deleted_at: null },
+        select: { id: true },
+      });
+
+      if (!parent) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Comment not found',
+        };
+      }
+
+      const replies = await this.prisma.shoutComment.findMany({
+        where: { parent_id: commentId, deleted_at: null },
+        skip,
+        take: limit,
+        orderBy: { created_at: 'asc' },
+        include: {
+          user: {
+            select: { id: true, name: true, username: true, avatar: true },
+          },
+          likes: { where: { user_id: userId }, select: { id: true } },
+          _count: { select: { likes: true, replies: true } },
+        },
+      });
+
+      const data = replies.map((r) => ({
+        id: r.id,
+        content: r.content,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        deleted_at: r.deleted_at,
+        user_id: r.user_id,
+        shout_id: r.shout_id,
+        parent_id: r.parent_id,
+        user: r.user,
+        is_liked: r.likes.length > 0,
+        likes_count: r._count.likes,
+        replies_count: r._count.replies,
+        replies: [], // can load nested replies on demand
+      }));
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Replies fetched',
+        data,
+      };
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to fetch replies',
       };
     }
   }
@@ -684,7 +799,7 @@ export class ShoutService {
       };
     } catch (error) {
       if (error.code === 'P2002') {
-         return {
+        return {
           success: false,
           statusCode: 409,
           message: 'Already liked',
@@ -725,7 +840,7 @@ export class ShoutService {
       const comment = await this.prisma.shoutComment.findUnique({
         where: { id: commentId },
       });
-      
+
       if (!comment) {
         return {
           success: false,
@@ -749,7 +864,7 @@ export class ShoutService {
         message: 'Comment deleted',
       };
     } catch (error) {
-       return {
+      return {
         success: false,
         statusCode: 500,
         message: 'Failed to delete comment',
@@ -757,9 +872,78 @@ export class ShoutService {
     }
   }
 
+  // async share(id: string, userId: string, createShoutDto: CreateShoutDto) {
+  //   // Sharing creates a new shout referencing the original
+  //   const originalShout = await this.prisma.shout.findUnique({ where: { id } });
+  //   if (!originalShout) {
+  //     return {
+  //       success: false,
+  //       statusCode: 404,
+  //       message: 'Original shout not found',
+  //     };
+  //   }
+
+  //   try {
+  //     const shout = await this.prisma.shout.create({
+  //       data: {
+  //         user_id: userId,
+  //         content: createShoutDto.content, // User can add their own text
+  //         original_shout_id: id,
+  //         is_anonymous: createShoutDto.is_anonymous || false,
+  //       },
+  //     });
+
+  //     // Notification
+  //     try {
+  //       if (originalShout.user_id !== userId) {
+  //         const sharer = await this.prisma.user.findUnique({
+  //           where: { id: userId },
+  //           select: { name: true, username: true },
+  //         });
+  //         const sharerName = sharer?.name || sharer?.username || 'Someone';
+
+  //         await this.notificationService.createNotification({
+  //           sender_id: userId,
+  //           receiver_id: originalShout.user_id,
+  //           text: `${sharerName} shared your shout`,
+  //           type: 'message',
+  //           entity_id: shout.id,
+  //         });
+  //       }
+  //     } catch (notifError) {
+  //       console.error('Error sending share notification:', notifError);
+  //     }
+
+  //     const result = await this.getPostById(shout.id, userId);
+  //     return {
+  //       success: true,
+  //       statusCode: 201,
+  //       message: 'Shout shared successfully',
+  //       shout: result,
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       statusCode: 500,
+  //       message: 'Failed to share shout',
+  //     };
+  //   }
+  // }
+
   async share(id: string, userId: string, createShoutDto: CreateShoutDto) {
-    // Sharing creates a new shout referencing the original
-    const originalShout = await this.prisma.shout.findUnique({ where: { id } });
+    // 1️⃣ Fetch the original shout
+    const originalShout = await this.prisma.shout.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { id: true, name: true, username: true, avatar: true },
+        },
+        medias: true,
+        _count: { select: { likes: true, comments: true, shares: true } },
+        likes: { where: { user_id: userId }, select: { id: true } },
+      },
+    });
+
     if (!originalShout) {
       return {
         success: false,
@@ -769,7 +953,8 @@ export class ShoutService {
     }
 
     try {
-      const shout = await this.prisma.shout.create({
+      // 2️⃣ Create a new shout for the share
+      const sharedShout = await this.prisma.shout.create({
         data: {
           user_id: userId,
           content: createShoutDto.content, // User can add their own text
@@ -778,7 +963,7 @@ export class ShoutService {
         },
       });
 
-      // Notification
+      // 3️⃣ Send notification to original shout owner
       try {
         if (originalShout.user_id !== userId) {
           const sharer = await this.prisma.user.findUnique({
@@ -792,21 +977,40 @@ export class ShoutService {
             receiver_id: originalShout.user_id,
             text: `${sharerName} shared your shout`,
             type: 'message',
-            entity_id: shout.id,
+            entity_id: sharedShout.id,
           });
         }
       } catch (notifError) {
         console.error('Error sending share notification:', notifError);
       }
 
-      const result = await this.getPostById(shout.id, userId);
+      // 4️⃣ Transform original shout for response
+      const transformShout = (shout) => ({
+        ...shout,
+        is_liked: shout.likes.length > 0,
+        likes_count: shout._count.likes,
+        comments_count: shout._count.comments,
+        shares_count: shout._count.shares,
+        likes: undefined,
+        _count: undefined,
+      });
+
       return {
         success: true,
         statusCode: 201,
         message: 'Shout shared successfully',
-        shout: result,
+        shout: {
+          id: sharedShout.id,
+          content: sharedShout.content,
+          user_id: sharedShout.user_id,
+          is_anonymous: sharedShout.is_anonymous,
+          created_at: sharedShout.created_at,
+          updated_at: sharedShout.updated_at,
+          original_shout: transformShout(originalShout), // embed original shout details
+        },
       };
     } catch (error) {
+      console.error('Error sharing shout:', error);
       return {
         success: false,
         statusCode: 500,

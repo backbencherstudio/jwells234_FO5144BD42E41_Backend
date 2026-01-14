@@ -296,7 +296,8 @@ export class ShoutController {
     }
   }
 
-  @ApiOperation({ summary: 'Get comments for a shout' })
+
+  @ApiOperation({ summary: 'Get top-level comments for a shout' })
   @Get(':id/comment')
   async getComments(
     @GetUser() user,
@@ -312,16 +313,44 @@ export class ShoutController {
         +page,
         +limit,
       );
-      if (result.statusCode) {
-        res.status(result.statusCode);
-      }
+      if (result.statusCode) res.status(result.statusCode);
       return result;
     } catch (error) {
+      console.error(error);
       res.status(500);
       return {
         success: false,
         statusCode: 500,
         message: 'Failed to fetch comments',
+      };
+    }
+  }
+
+  @ApiOperation({ summary: 'Get replies of a specific comment' })
+  @Get('comment/:commentId/replies')
+  async getCommentReplies(
+    @GetUser() user,
+    @Param('commentId') commentId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    try {
+      const result = await this.shoutService.getCommentReplies(
+        commentId,
+        user.userId,
+        +page,
+        +limit,
+      );
+      if (result.statusCode) res.status(result.statusCode);
+      return result;
+    } catch (error) {
+      console.error(error);
+      res.status(500);
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Failed to fetch comment replies',
       };
     }
   }
@@ -370,10 +399,9 @@ export class ShoutController {
         res.status(result.statusCode);
       }
       return result;
-    }
-    catch (error) {
+    } catch (error) {
       res.status(500);
-      return {  
+      return {
         success: false,
         statusCode: 500,
         message: 'Failed to unlike comment',

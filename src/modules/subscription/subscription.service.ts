@@ -21,6 +21,7 @@ export class SubscriptionService {
       where: {
         userId: user.userId,
         isTrial: true,
+        trialEndsAt: { not: null },
       },
     });
 
@@ -77,23 +78,7 @@ export class SubscriptionService {
     );
 
     // If user has a FREE subscription, update it, otherwise create new
-    if (activeSubscription) {
-      await this.prisma.subscription.update({
-        where: { id: activeSubscription.id },
-        data: {
-          planId: plan.id,
-          type: plan.type,
-          status: 'trialing',
-          isActive: true,
-          startDate: startDate,
-          endDate: endDate,
-          trialEndsAt: endDate,
-          remainingDays: remainingDays,
-          isTrial: true,
-          updatedAt: new Date(),
-        },
-      });
-    } else {
+    if (!activeSubscription) {
       await this.prisma.subscription.create({
         data: {
           userId: user.userId,
@@ -139,7 +124,7 @@ export class SubscriptionService {
           userId: userId,
         },
         orderBy: {
-          createdAt: 'desc',
+          startDate: 'desc',
         },
       });
     }
@@ -224,7 +209,10 @@ export class SubscriptionService {
         paystackPlanId = String(plan.id);
         paystackPlanCode = plan.plan_code;
       } catch (error) {
-        console.warn('Skipping Paystack Plan creation (likely free plan or error):', error.message);
+        console.warn(
+          'Skipping Paystack Plan creation (likely free plan or error):',
+          error.message,
+        );
       }
     }
 
@@ -267,6 +255,7 @@ export class SubscriptionService {
   }
 
   async chargeCard(user: any, dto: ChargeCardDto) {
+
     const dbUser = await this.prisma.user.findUnique({
       where: { id: user.userId },
     });
@@ -410,13 +399,12 @@ export class SubscriptionService {
       startDate.setFullYear(
         startDate.getFullYear() + (plan.intervalCount || 1),
       );
-  }
+    }
 
     let paystackSubCode = null;
     let paystackEmailToken = null;
 
     try {
-      // Create Subscription on Paystack (Future Start Date)
       // This ensures auto-renewal works
       const sub = await PaystackPayment.createSubscription({
         customer: transaction.customer.customer_code || dbUser.email,
@@ -470,7 +458,7 @@ export class SubscriptionService {
 
     // Update Local DB
     const existingSub = await this.prisma.subscription.findFirst({
-      where: { userId: dbUser.id },
+      where: { userId: dbUser.id, type: plan.type },
     });
 
     const subData = {
@@ -479,13 +467,13 @@ export class SubscriptionService {
       plan: { connect: { id: plan.id } },
       startDate: new Date(), // Active now
       endDate: startDate, // Valid until next billing
-      trialEndsAt: null,
+      // trialEndsAt: null,
       paystackSubId: paystackSubCode || `paystack_ref_${transaction.reference}`,
       paystackEmailToken: paystackEmailToken,
       cancelAtPeriodEnd: false,
       status: 'active',
       type: plan.type,
-      isTrial: false,
+      // isTrial: false,
       updatedAt: new Date(),
     };
 
@@ -532,7 +520,10 @@ export class SubscriptionService {
         entity_id: plan.id,
       });
     } catch (error) {
-      console.error('Failed to record payment transaction or send notification:', error);
+      console.error(
+        'Failed to record payment transaction or send notification:',
+        error,
+      );
     }
   }
 
@@ -737,7 +728,10 @@ export class SubscriptionService {
           entity_id: sub.planId,
         });
       } catch (error) {
-        console.error('Failed to record renewal transaction or send notification:', error);
+        console.error(
+          'Failed to record renewal transaction or send notification:',
+          error,
+        );
       }
     }
   }
