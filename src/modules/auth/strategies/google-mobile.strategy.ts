@@ -3,7 +3,6 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy as CustomStrategy } from 'passport-custom';
 import { Request } from 'express';
 import { OAuth2Client } from 'google-auth-library';
-import appConfig from '../../../config/app.config';
 import { AuthService } from '../auth.service';
 
 @Injectable()
@@ -34,7 +33,6 @@ export class GoogleMobileStrategy extends PassportStrategy(
     }
 
     const audiences = [
-      appConfig().auth.google.app_id,
       process.env.GOOGLE_ANDROID_APP_ID,
       process.env.GOOGLE_IOS_APP_ID,
       process.env.GOOGLE_MOBILE_APP_IDS,
