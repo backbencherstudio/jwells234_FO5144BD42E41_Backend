@@ -584,68 +584,6 @@ export class AuthService {
     }
   }
 
-  // apple log in using passport.js
-  async appleLogin({
-    email,
-    userId,
-    aud,
-  }: {
-    email: string;
-    userId: string;
-    aud: string;
-  }) {
-    try {
-      const payload = { email, sub: userId, aud };
-
-      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-
-      const user = await UserRepository.getUserDetails(userId);
-
-      await this.redis.set(
-        `refresh_token:${user.id}`,
-        refreshToken,
-        'EX',
-        60 * 60 * 24 * 7,
-      );
-
-      // create paystack customer account id
-      try {
-        const paystackCustomer = await PaystackPayment.createCustomer({
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-        });
-
-        if (paystackCustomer) {
-          await this.prisma.user.update({
-            where: { id: user.id },
-            data: { billing_id: paystackCustomer.customer_code },
-          });
-        }
-      } catch (error) {
-        return {
-          success: false,
-          statusCode: 400,
-          message: 'User created but failed to create billing account',
-        };
-      }
-
-      return {
-        message: 'Logged in successfully',
-        statusCode: 200,
-        authorization: {
-          type: 'bearer',
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        },
-        type: user.type,
-      };
-    } catch (error) {
-      return { success: false, statusCode: 500, message: error.message };
-    }
-  }
-
   async refreshToken(
     user_id: string,
     refreshToken: string,
@@ -1744,7 +1682,5 @@ export class AuthService {
       },
     };
   }
-
-
 
 }
