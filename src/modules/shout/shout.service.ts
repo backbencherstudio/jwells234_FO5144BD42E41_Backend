@@ -301,12 +301,30 @@ export class ShoutService {
           where: { user_id: currentUserId },
           select: { id: true },
         },
+        // Include original shout if this shout is a share
+        original_shout: {
+          include: {
+            user: {
+              select: { id: true, name: true, username: true, avatar: true },
+            },
+            medias: true,
+            _count: { select: { likes: true, comments: true, shares: true } },
+            likes: { where: { user_id: currentUserId }, select: { id: true } },
+          },
+        },
       },
     });
 
-    const transformedShouts = shouts.map((shout) =>
-      this.transformShout(shout, currentUserId),
-    );
+    const transformedShouts = shouts.map((shout) => {
+      const transformed = this.transformShout(shout, currentUserId);
+      if (shout.original_shout) {
+        transformed.original_shout = this.transformShout(
+          shout.original_shout,
+          currentUserId,
+        );
+      }
+      return transformed;
+    });
 
     return {
       success: true,
