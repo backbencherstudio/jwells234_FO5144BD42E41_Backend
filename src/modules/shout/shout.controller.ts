@@ -173,28 +173,54 @@ export class ShoutController {
 
   @ApiOperation({ summary: 'Update a shout by ID' })
   @Patch(':id')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 5 },
+        { name: 'audio', maxCount: 1 },
+        { name: 'video', maxCount: 3 },
+      ],
+      {
+        storage: memoryStorage(),
+      },
+    ),
+  )
   async updatePost(
     @GetUser() user,
     @Param('id') id: string,
     @Body() updateShoutDto: UpdateShoutDto,
+    @UploadedFiles()
+    files: {
+      images?: Express.Multer.File[];
+      audio?: Express.Multer.File[];
+      video?: Express.Multer.File[];
+    },
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
+      const images = files?.images;
+      const audio = files?.audio ? files.audio[0] : null;
+      const videos = files?.video;
       const result = await this.shoutService.updatePost(
         id,
         user.userId,
         updateShoutDto,
+        images,
+        audio,
+        videos,
       );
       if (result.statusCode) {
         res.status(result.statusCode);
       }
       return result;
     } catch (error) {
+      console.error('Failed to update shout:', error);
       res.status(500);
       return {
         success: false,
         statusCode: 500,
-        message: 'Failed to update shout',
+        message: error?.message || 'Failed to update shout',
       };
     }
   }

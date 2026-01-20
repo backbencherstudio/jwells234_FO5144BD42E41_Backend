@@ -162,6 +162,7 @@ export class AuthService {
         success: true,
         statusCode: 201,
         message: 'We have sent an OTP code to your email',
+        OTP: token, // remove this line in production
       };
 
       // ----------------------------------------------------
@@ -212,6 +213,7 @@ export class AuthService {
           name: true,
           email: true,
           username: true,
+          status: true,
           avatar: true,
           about: true,
           address: true,
@@ -979,7 +981,7 @@ export class AuthService {
           return {
             success: false,
             statusCode: 400,
-            message: 'Invalid password',
+            message: 'Old password is incorrect',
           };
         }
       } else {
@@ -1429,8 +1431,7 @@ export class AuthService {
     }
   }
 
-
-//  =====================================================================
+  //  =====================================================================
   async handleGoogleProfile(input: {
     googleId: string;
     email?: string | null;
@@ -1454,8 +1455,9 @@ export class AuthService {
 
     const makeUsername = (): string | null => {
       const baseFromEmail = email?.split('@')?.[0];
-      const base = (baseFromEmail || [firstName, lastName].filter(Boolean).join(''))
-        .toLowerCase();
+      const base = (
+        baseFromEmail || [firstName, lastName].filter(Boolean).join('')
+      ).toLowerCase();
       const sanitized = base.replace(/[^a-z0-9_\.\-]/g, '');
       return sanitized || null;
     };
@@ -1478,7 +1480,7 @@ export class AuthService {
           last_name: byEmail.last_name ?? lastName,
           name:
             byEmail.name ??
-            (([firstName, lastName].filter(Boolean).join(' ').trim()) || null),
+            ([firstName, lastName].filter(Boolean).join(' ').trim() || null),
           avatar: byEmail.avatar ?? avatar,
           email_verified_at: byEmail.email_verified_at ?? new Date(),
         };
@@ -1521,7 +1523,7 @@ export class AuthService {
         email: email,
         first_name: firstName,
         last_name: lastName,
-        name: ([firstName, lastName].filter(Boolean).join(' ').trim()) || null,
+        name: [firstName, lastName].filter(Boolean).join(' ').trim() || null,
         avatar: avatar,
         email_verified_at: email ? new Date() : undefined,
       };
@@ -1609,7 +1611,7 @@ export class AuthService {
           last_name: byEmail.last_name ?? lastName,
           name:
             byEmail.name ??
-            (([firstName, lastName].filter(Boolean).join(' ').trim()) || null),
+            ([firstName, lastName].filter(Boolean).join(' ').trim() || null),
           email_verified_at: byEmail.email_verified_at ?? new Date(),
         };
 
@@ -1631,14 +1633,16 @@ export class AuthService {
         email: resolvedEmail,
         first_name: firstName,
         last_name: lastName,
-        name: ([firstName, lastName].filter(Boolean).join(' ').trim()) || null,
+        name: [firstName, lastName].filter(Boolean).join(' ').trim() || null,
         email_verified_at: new Date(),
       };
 
       // username best-effort (optional)
       const baseUsername =
-        resolvedEmail.split('@')[0]?.toLowerCase?.().replace(/[^a-z0-9_\.\-]/g, '') ||
-        null;
+        resolvedEmail
+          .split('@')[0]
+          ?.toLowerCase?.()
+          .replace(/[^a-z0-9_\.\-]/g, '') || null;
       if (baseUsername) {
         baseData.username = baseUsername;
       }
@@ -1682,5 +1686,4 @@ export class AuthService {
       },
     };
   }
-
 }
