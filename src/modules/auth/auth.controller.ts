@@ -598,31 +598,20 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Halp support' })
-  @Post('help-support')
+  @Post('ask-help-support')
   async helpSupport(
-    @GetUser() user,
+    @GetUser('userId') userId: string,
     @Body()
     data: {
-      name: string;
-      email: string;
       subject: string;
       message: string;
     },
     @Res() res: Response,
   ) {
     try {
-      const name = user.name;
-      const email = user.email;
-
       const subject = data.subject;
       const message = data.message;
 
-      if (!name) {
-        throw new HttpException('Name not provided', HttpStatus.UNAUTHORIZED);
-      }
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
-      }
       if (!message) {
         throw new HttpException(
           'Message not provided',
@@ -630,8 +619,10 @@ export class AuthController {
         );
       }
 
+      console.log('user id', userId);
+
       const response = await this.authService.helpSupport(
-        email,
+        userId,
         subject,
         message,
       );

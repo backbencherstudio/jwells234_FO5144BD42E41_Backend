@@ -393,8 +393,26 @@ async getPostById(id: string, userId: string) {
 }
 
 
-  async updatePost(id: string, userId: string, updateShoutDto: UpdateShoutDto) {
+  async updatePost(
+    id: string,
+    userId: string,
+    updateShoutDto: UpdateShoutDto,
+    images?: Express.Multer.File[],
+    audio?: Express.Multer.File,
+    videos?: Express.Multer.File[],
+  ) {
     try {
+      const getFileBytes = async (file: Express.Multer.File): Promise<Buffer> => {
+        if (file?.buffer && Buffer.isBuffer(file.buffer)) {
+          return file.buffer;
+        }
+        const anyFile = file as any;
+        if (anyFile?.path && typeof anyFile.path === 'string') {
+          return await readFile(anyFile.path);
+        }
+        throw new Error('Uploaded file data is missing (no buffer/path)');
+      };
+
       const shout = await this.prisma.shout.findUnique({ where: { id } });
 
       if (!shout || shout.user_id !== userId) {
@@ -405,10 +423,110 @@ async getPostById(id: string, userId: string) {
         };
       }
 
+      // Update basic shout data
       await this.prisma.shout.update({
         where: { id },
-        data: updateShoutDto,
+        data: {
+          content: updateShoutDto.content,
+          category: updateShoutDto.category,
+          location: updateShoutDto.location,
+          latitude: updateShoutDto.latitude,
+          longitude: updateShoutDto.longitude,
+          is_anonymous: updateShoutDto.is_anonymous,
+        },
       });
+
+      // Handle Images - if new images provided, delete old ones and upload new
+      if (images && images.length > 0) {
+        // Delete existing image media
+        await this.prisma.shoutMedia.deleteMany({
+          where: { shout_id: id, type: 'IMAGE' },
+        });
+
+        // Upload new images
+        for (const image of images) {
+          const safeName = image.originalname
+            .toLowerCase()
+            .replace(/[^a-z0-9.\s-_]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+          const fileName = `${StringHelper.randomString()}-${safeName}`;
+          const path = `shouts/${id}/images/${fileName}`;
+
+          const bytes = await getFileBytes(image);
+          await SazedStorage.put(path, bytes);
+          const url = SazedStorage.url(encodeURI(path));
+
+          await this.prisma.shoutMedia.create({
+            data: {
+              shout_id: id,
+              type: 'IMAGE',
+              url: url,
+            },
+          });
+        }
+      }
+
+      // Handle Audio - if new audio provided, delete old one and upload new
+      if (audio) {
+        // Delete existing audio media
+        await this.prisma.shoutMedia.deleteMany({
+          where: { shout_id: id, type: 'AUDIO' },
+        });
+
+        // Upload new audio
+        const safeName = audio.originalname
+          .toLowerCase()
+          .replace(/[^a-z0-9.\s-_]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-');
+        const fileName = `${StringHelper.randomString()}-${safeName}`;
+        const path = `shouts/${id}/audio/${fileName}`;
+
+        const bytes = await getFileBytes(audio);
+        await SazedStorage.put(path, bytes);
+        const url = SazedStorage.url(encodeURI(path));
+
+        await this.prisma.shoutMedia.create({
+          data: {
+            shout_id: id,
+            type: 'AUDIO',
+            url: url,
+            duration: updateShoutDto.audio_duration,
+          },
+        });
+      }
+
+      // Handle Videos - if new videos provided, delete old ones and upload new
+      if (videos && videos.length > 0) {
+        // Delete existing video media
+        await this.prisma.shoutMedia.deleteMany({
+          where: { shout_id: id, type: 'VIDEO' },
+        });
+
+        // Upload new videos
+        for (const video of videos) {
+          const safeName = video.originalname
+            .toLowerCase()
+            .replace(/[^a-z0-9.\s-_]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+          const fileName = `${StringHelper.randomString()}-${safeName}`;
+          const path = `shouts/${id}/video/${fileName}`;
+
+          const bytes = await getFileBytes(video);
+          await SazedStorage.put(path, bytes);
+          const url = SazedStorage.url(encodeURI(path));
+
+          await this.prisma.shoutMedia.create({
+            data: {
+              shout_id: id,
+              type: 'VIDEO',
+              url: url,
+            },
+          });
+        }
+      }
 
       const updatedShout = await this.getPostById(id, userId);
 
