@@ -22,16 +22,20 @@ async function bootstrap() {
   const s3Cfg: any = fileSystems.s3 || {};
 
   const envMinioEndpoint =
-    cleanEnv(process.env.MINIO_ENDPOINT) || cleanEnv(process.env.AWS_S3_ENDPOINT);
+    cleanEnv(process.env.MINIO_ENDPOINT) ||
+    cleanEnv(process.env.AWS_S3_ENDPOINT);
   const envMinioBucket =
     cleanEnv(process.env.MINIO_BUCKET) || cleanEnv(process.env.AWS_S3_BUCKET);
   const envMinioAccess =
-    cleanEnv(process.env.MINIO_ACCESS_KEY) || cleanEnv(process.env.AWS_ACCESS_KEY_ID);
+    cleanEnv(process.env.MINIO_ACCESS_KEY) ||
+    cleanEnv(process.env.AWS_ACCESS_KEY_ID);
   const envMinioSecret =
-    cleanEnv(process.env.MINIO_SECRET_KEY) || cleanEnv(process.env.AWS_SECRET_ACCESS_KEY);
+    cleanEnv(process.env.MINIO_SECRET_KEY) ||
+    cleanEnv(process.env.AWS_SECRET_ACCESS_KEY);
 
   // Masked log helper
-  const mask = (v: string | null | undefined) => (v ? (v.length > 6 ? `${v.slice(0,3)}***${v.slice(-3)}` : '***') : null);
+  const mask = (v: string | null | undefined) =>
+    v ? (v.length > 6 ? `${v.slice(0, 3)}***${v.slice(-3)}` : '***') : null;
   try {
     console.log('Storage env detection:', {
       AWS_S3_ENDPOINT: mask(cleanEnv(process.env.AWS_S3_ENDPOINT)),
@@ -86,16 +90,20 @@ async function bootstrap() {
     const cfg = SazedStorage.getConfig();
     if (cfg) {
       if (cfg.driver === 's3') {
-        console.log('SazedStorage effective config:', { driver: 's3', endpoint: mask((cfg.connection as any).awsEndpoint), bucket: (cfg.connection as any).awsBucket });
+        console.log('SazedStorage effective config:', {
+          driver: 's3',
+          endpoint: mask((cfg.connection as any).awsEndpoint),
+          bucket: (cfg.connection as any).awsBucket,
+        });
       } else {
-        console.log('SazedStorage effective config:', { driver: cfg.driver, rootUrl: (cfg.connection as any).rootUrl });
+        console.log('SazedStorage effective config:', {
+          driver: cfg.driver,
+          rootUrl: (cfg.connection as any).rootUrl,
+        });
       }
     }
   } catch (err) {}
 
-
-
-  
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
@@ -112,7 +120,8 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://silent-whistle.vercel.app'],
+    // origin: ['http://localhost:3000', 'http://localhost:3001', 'https://silent-whistle.vercel.app'],
+    origin: true, // reflect request origin
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -123,7 +132,7 @@ async function bootstrap() {
       'X-Requested-With',
     ],
   });
-  
+
   app.use(helmet());
   // Enable it, if special charactrers not encoding perfectly
   // app.use((req, res, next) => {
