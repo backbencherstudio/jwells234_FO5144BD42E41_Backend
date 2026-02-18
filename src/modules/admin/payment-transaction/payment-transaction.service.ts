@@ -136,26 +136,35 @@ export class PaymentTransactionService {
       const sub = tx.user_id ? subMap.get(tx.user_id) : null;
       return {
         id: tx.id,
-        transactionId: tx.reference_number || tx.id, // Use reference if available
+        transactionId: tx.reference_number || tx.id,
         date: tx.created_at,
-        status: tx.status, // Transaction status
+        status: tx.status,
         amount: tx.amount,
         currency: tx.currency,
         provider: tx.provider,
         type: tx.type,
-        user: {
-          id: tx.user?.id,
-          name: tx.user?.name,
-          username: tx.user?.username,
-          avatar: tx.user?.avatar,
-          email: tx.user?.email,
-        },
+        user: tx.user
+          ? {
+              id: tx.user.id,
+              name: tx.user.name,
+              username: tx.user.username,
+              avatar: tx.user.avatar,
+              email: tx.user.email,
+            }
+          : tx.user_id
+            ? {
+                id: tx.user_id,
+                name: 'Deleted User',
+                username: null,
+                avatar: null,
+                email: null,
+              }
+            : null,
         plan: {
           name: sub?.plan?.name || 'N/A',
           interval: sub?.plan?.interval || 'N/A',
           price: sub?.plan?.price || 0,
         },
-        // paymentPlan: sub?.plan?.name || 'N/A', // Current plan
         subscriptionStatus: sub?.isActive ? 'Active' : 'Inactive',
       };
     });
