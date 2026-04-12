@@ -1,6 +1,6 @@
 // external imports
 import { MiddlewareConsumer, Module } from '@nestjs/common';
-// import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
@@ -13,7 +13,7 @@ import { AppService } from './app.service';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
-// import { ThrottlerBehindProxyGuard } from './common/guard/throttler-behind-proxy.guard';
+import { ThrottlerBehindProxyGuard } from './common/guard/throttler-behind-proxy.guard';
 // import { LocationGuard } from './common/guard/location.guard';
 import { AbilityModule } from './ability/ability.module';
 import { MailModule } from './mail/mail.module';
@@ -53,24 +53,23 @@ import { NotificationModule } from './modules/application/notification/notificat
       },
     }),
 
-    // disabling throttling for dev
-    // ThrottlerModule.forRoot([
-    //   {
-    //     name: 'short',
-    //     ttl: 1000,
-    //     limit: 3,
-    //   },
-    //   {
-    //     name: 'medium',
-    //     ttl: 10000,
-    //     limit: 20,
-    //   },
-    //   {
-    //     name: 'long',
-    //     ttl: 60000,
-    //     limit: 100,
-    //   },
-    // ]),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,
+        limit: parseInt(process.env.THROTTLE_SHORT_LIMIT || '15', 10),
+      },
+      {
+        name: 'medium',
+        ttl: 10000,
+        limit: parseInt(process.env.THROTTLE_MEDIUM_LIMIT || '100', 10),
+      },
+      {
+        name: 'long',
+        ttl: 60000,
+        limit: parseInt(process.env.THROTTLE_LONG_LIMIT || '300', 10),
+      },
+    ]),
     // General modules
     PrismaModule,
     AuthModule,
@@ -91,15 +90,10 @@ import { NotificationModule } from './modules/application/notification/notificat
     //   provide: APP_GUARD,
     //   useClass: LocationGuard,
     // },
-    // disabling throttling for dev
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: ThrottlerGuard,
-    // },
-    // disbling throttling for dev {
-    //   provide: APP_GUARD,
-    //   useClass: ThrottlerBehindProxyGuard,
-    // },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerBehindProxyGuard,
+    },
     AppService,
   ],
 })
