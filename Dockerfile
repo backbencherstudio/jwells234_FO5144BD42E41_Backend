@@ -21,7 +21,7 @@ COPY .env ./
 RUN npx prisma generate
 
 # Creates a "dist" folder with the production build
-# RUN yarn build
+RUN yarn build
 
 # Expose the port on which the app will run
 EXPOSE 4000
