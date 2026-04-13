@@ -8,42 +8,42 @@ import { DateHelper } from '../../../common/helper/date.helper';
 export class ContactService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createContactDto: CreateContactDto) {
-    try {
-      const data = {};
-      if (createContactDto.first_name) {
-        data['first_name'] = createContactDto.first_name;
-      }
-      if (createContactDto.last_name) {
-        data['last_name'] = createContactDto.last_name;
-      }
-      if (createContactDto.email) {
-        data['email'] = createContactDto.email;
-      }
-      if (createContactDto.phone_number) {
-        data['phone_number'] = createContactDto.phone_number;
-      }
-      if (createContactDto.message) {
-        data['message'] = createContactDto.message;
-      }
+  // async create(createContactDto: CreateContactDto) {
+  //   try {
+  //     const data = {};
+  //     if (createContactDto.first_name) {
+  //       data['first_name'] = createContactDto.first_name;
+  //     }
+  //     if (createContactDto.last_name) {
+  //       data['last_name'] = createContactDto.last_name;
+  //     }
+  //     if (createContactDto.email) {
+  //       data['email'] = createContactDto.email;
+  //     }
+  //     if (createContactDto.phone_number) {
+  //       data['phone_number'] = createContactDto.phone_number;
+  //     }
+  //     if (createContactDto.message) {
+  //       data['message'] = createContactDto.message;
+  //     }
 
-      await this.prisma.contact.create({
-        data: {
-          ...data,
-          updated_at: DateHelper.now(),
-        },
-      });
-      return {
-        success: true,
-        message: 'Contact created successfully',
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
-  }
+  //     await this.prisma.contact.create({
+  //       data: {
+  //         ...data,
+  //         updated_at: DateHelper.now(),
+  //       },
+  //     });
+  //     return {
+  //       success: true,
+  //       message: 'Contact created successfully',
+  //     };
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       message: error.message,
+  //     };
+  //   }
+  // }
 
   async findAll({ q = null, status = null }: { q?: string; status?: number }) {
     try {
@@ -68,6 +68,7 @@ export class ContactService {
           email: true,
           phone_number: true,
           message: true,
+          status: true,
         },
       });
       return {
@@ -88,6 +89,7 @@ export class ContactService {
         where: { id },
         select: {
           id: true,
+          status: true,
           first_name: true,
           last_name: true,
           email: true,
@@ -110,22 +112,9 @@ export class ContactService {
   async update(id: string, updateContactDto: UpdateContactDto) {
     try {
       const data = {};
-      if (updateContactDto.first_name) {
-        data['first_name'] = updateContactDto.first_name;
+      if (updateContactDto.status) {
+        data['status'] = updateContactDto.status;
       }
-      if (updateContactDto.last_name) {
-        data['last_name'] = updateContactDto.last_name;
-      }
-      if (updateContactDto.email) {
-        data['email'] = updateContactDto.email;
-      }
-      if (updateContactDto.phone_number) {
-        data['phone_number'] = updateContactDto.phone_number;
-      }
-      if (updateContactDto.message) {
-        data['message'] = updateContactDto.message;
-      }
-
       await this.prisma.contact.update({
         where: { id },
         data: {
