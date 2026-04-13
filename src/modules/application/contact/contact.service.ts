@@ -17,12 +17,12 @@ export class ContactService {
         throw new Error('Message is required');
       }
 
-      console.log(user);
+      // console.log(createContactDto, user);
 
-      const firstName = user?.first_name || 'Guest';
-      const lastName = user?.last_name || 'User';
-      const email = user?.email || 'guest@example.com';
-      const phone_number = user?.phone_number || null;
+      const firstName = createContactDto?.first_name || 'Guest';
+      const lastName = createContactDto?.last_name || 'User';
+      const email = createContactDto?.email;
+      const phone_number = createContactDto?.phone_number || null;
 
       await this.prisma.contact.create({
         data: {
