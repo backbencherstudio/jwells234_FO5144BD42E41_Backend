@@ -1,4 +1,11 @@
-import { PartialType } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { CreateContactDto } from './create-contact.dto';
+import { IsNotEmpty } from 'class-validator';
 
-export class UpdateContactDto extends PartialType(CreateContactDto) {}
+export class UpdateContactDto {
+  // get status from enum ContactStatus
+
+  @ApiProperty({ description: 'Status of the contact message' })
+  @IsNotEmpty()
+  status?: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+}

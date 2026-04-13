@@ -31,6 +31,7 @@ export class ContactService {
           email: email,
           phone_number: phone_number,
           message: createContactDto.message,
+          status: 'OPEN',
         },
       });
 

@@ -473,11 +473,19 @@ model Faq {
   @@map("faqs")
 }
 
+enum ContactStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 model Contact {
-  id         String    @id @default(cuid())
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now())
+  id         String         @id @default(cuid())
+  created_at DateTime       @default(now())
+  updated_at DateTime       @default(now())
   deleted_at DateTime?
+  status     ContactStatus? @default(OPEN)
 
   first_name   String?
   last_name    String?

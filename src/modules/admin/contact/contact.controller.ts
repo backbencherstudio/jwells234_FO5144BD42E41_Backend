@@ -26,20 +26,7 @@ import { RolesGuard } from '../../../common/guard/role/roles.guard';
 export class ContactController {
   constructor(private readonly contactService: ContactService) {}
 
-  @ApiOperation({ summary: 'Create contact' })
-  @Post()
-  async create(@Body() createContactDto: CreateContactDto) {
-    try {
-      const contact = await this.contactService.create(createContactDto);
-      return contact;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
-  }
-
+ 
   @ApiOperation({ summary: 'Read all contacts' })
   @Get()
   async findAll(@Query() query: { q?: string; status?: number }) {
