@@ -1,27 +1,24 @@
-# Hostinger VPS Production Deployment Guide
+# VPS Production Deployment Guide
 
-## 1) Prepare Hostinger VPS
-
-1. Create an Ubuntu 22.04/24.04 VPS.
-2. Point DNS A record for `api.yourdomain.com` to VPS public IP.
-3. SSH into VPS and install base packages:
+## 1. System Update & Base Packages
 
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y ca-certificates curl gnupg lsb-release git nginx ufw
 ```
 
-4. Install Docker Engine + Compose plugin:
+## 2. Install Docker & Docker Compose
 
 ```bash
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER
 newgrp docker
+
 docker --version
 docker compose version
 ```
 
-5. Configure firewall:
+## 3. Configure Firewall
 
 ```bash
 sudo ufw allow OpenSSH
@@ -29,92 +26,233 @@ sudo ufw allow 'Nginx Full'
 sudo ufw enable
 ```
 
-## 2) Prepare Project On Server
-
-1. Create deployment folder and clone repository:
+## 4. Install Node.js, Yarn, PM2
 
 ```bash
-sudo mkdir -p /srv/backend
-sudo chown -R $USER:$USER /srv/backend
-git clone <your-repo-url> /srv/backend
-cd /srv/backend
+curl -sL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+sudo npm install -g yarn
+sudo npm install -g pm2
 ```
 
-2. Create production env file:
+## 5. Install PostgreSQL
 
 ```bash
-cp .env.production.example .env.production
+sudo apt update
+sudo apt install -y postgresql postgresql-contrib
 ```
 
-3. Edit `.env.production` with real production secrets.
-
-## 3) Run Backend Stack
+## 6. Configure PostgreSQL Password
 
 ```bash
-cd /srv/backend
-docker compose -f docker-compose.prod.yml up -d --build
+sudo -i -u postgres
+psql
+ALTER USER postgres PASSWORD 'root';
+\q
+exit
 ```
 
-Check status:
+## 7. Enable PostgreSQL Remote Access
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f app
+sudo nano /etc/postgresql/17/main/postgresql.conf
+listen_addresses = '*'
+sudo nano /etc/postgresql/17/main/pg_hba.conf
+host    all             all             0.0.0.0/0               md5
+sudo ufw allow 5432/tcp
+sudo systemctl restart postgresql
 ```
 
-## 4) Configure Nginx Reverse Proxy
-
-1. Copy template:
+## 8. Prepare Backend Directory
 
 ```bash
-sudo cp deploy/nginx/backend.conf /etc/nginx/sites-available/backend
+sudo mkdir -p /var/www/backend
+sudo chown -R $USER:$USER /var/www/backend
+cd /var/www/backend
 ```
 
-2. Update `server_name` in `/etc/nginx/sites-available/backend` to your API domain.
-3. Enable site and reload nginx:
+## 9. Clone Project Repository
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/backend /etc/nginx/sites-enabled/backend
+git clone <your-repo-url>
+cd <project-folder>
+```
+
+## 10. Install Dependencies
+
+```bash
+yarn install
+```
+
+## 11. Setup Environment Variables
+
+```bash
+nano .env
+```
+
+## 12. Run Database Migration
+
+```bash
+npx prisma migrate deploy
+```
+
+## 13. Build Backend
+
+```bash
+yarn build
+```
+
+## 14. Start Backend Using PM2
+
+```bash
+pm2 start dist/src/main.js --name backend
+pm2 save
+pm2 startup
+```
+
+## 15. Create Nginx Backend Config
+
+```bash
+sudo nano /etc/nginx/sites-available/backend
+```
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name backend.yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+## 16. Enable Backend Config
+
+```bash
+sudo ln -s /etc/nginx/sites-available/backend /etc/nginx/sites-enabled/
 sudo nginx -t
-sudo systemctl reload nginx
+sudo systemctl restart nginx
 ```
 
-## 5) Enable SSL (Let's Encrypt)
+## 17. Install Certbot (SSL)
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d api.yourdomain.com
+sudo snap install core
+sudo snap refresh core
+sudo apt remove certbot -y
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
 ```
 
-Use auto-renew check:
+## 18. Generate SSL Certificates
 
 ```bash
-sudo certbot renew --dry-run
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com -d backend.yourdomain.com
 ```
 
-## 6) Configure GitHub Secrets For CI/CD
+## 19. Create DNS Record for Storage
 
-Set these repository secrets:
+```text
+storage.yourdomain.com → VPS_IP
+```
 
-- `VPS_HOST`: VPS public IP or host
-- `VPS_USER`: SSH user on VPS
-- `VPS_SSH_KEY`: private key content
-- `GHCR_USERNAME`: GitHub username for package pull
-- `GHCR_TOKEN`: Personal Access Token with `read:packages`
-- `ENV_PRODUCTION_FILE`: full content of `.env.production`
+## 20. Create Nginx Config for MinIO Storage
 
-The workflow at `.github/workflows/deploy.yml` will:
-1. Build and push Docker image to GHCR.
-2. SSH into VPS.
-3. Write `.env.production` from secret.
-4. Pull latest image.
-5. Run `docker compose -f docker-compose.prod.yml up -d`.
+```bash
+sudo nano /etc/nginx/sites-available/storage
+```
 
-## 7) Production Checklist
+```nginx
+server {
+    listen 80;
 
-- Use strong secrets for `APP_KEY`, `JWT_SECRET`, `SESSION_SECRET`.
-- Keep `SWAGGER_ENABLED=false` in production.
-- Restrict `CORS_ORIGINS` to only your frontend domains.
-- Rotate any credentials previously committed to local `.env` files.
-- Back up PostgreSQL volume regularly.
-- Monitor logs with `docker compose logs` and configure external monitoring.
+    server_name storage.yourdomain.com;
+
+    client_max_body_size 100M;
+
+    location / {
+        proxy_pass http://localhost:9000;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+## 21. Enable Storage Config
+
+```bash
+sudo ln -s /etc/nginx/sites-available/storage /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+## 22. Generate SSL for Storage
+
+```bash
+sudo certbot --nginx -d storage.yourdomain.com
+```
+
+## 23. Restart MinIO Container
+
+```bash
+docker restart minio
+```
+
+## 24. Install MinIO Client
+
+```bash
+curl https://dl.min.io/client/mc/release/linux-amd64/mc -o mc
+chmod +x mc
+sudo mv mc /usr/local/bin/
+```
+
+## 25. Connect MinIO CLI
+
+```bash
+mc alias set local http://127.0.0.1:9000 MINIO_ROOT_USER MINIO_ROOT_PASSWORD
+```
+
+## 26. Create Storage Bucket
+
+```bash
+mc mb local/public
+```
+
+## 27. Make Bucket Public
+
+```bash
+mc anonymous set download local/public
+```
+
+## 28. Verify Bucket
+
+```bash
+mc ls local
+mc anonymous get local/public
+```
+
+## 29. Restart Backend
+
+```bash
+pm2 restart backend
+```
+
+## 30. Verify Services
+
+```bash
+pm2 list
+docker ps
+sudo systemctl status nginx
+```
