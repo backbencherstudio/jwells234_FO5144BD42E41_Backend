@@ -20,7 +20,8 @@ import { Response } from 'express';
 
 @ApiTags('Map Explore')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, SubscriptionGuard)
+// @UseGuards(JwtAuthGuard, SubscriptionGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('map-explore')
 export class MapExploreController {
   constructor(private readonly mapExploreService: MapExploreService) {}
