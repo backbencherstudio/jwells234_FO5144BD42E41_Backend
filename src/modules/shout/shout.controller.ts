@@ -32,7 +32,8 @@ import { SubscriptionGuard } from 'src/common/guard/subscription.guard';
 
 @ApiTags('shout')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, SubscriptionGuard)
+// @UseGuards(JwtAuthGuard, SubscriptionGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('shout')
 export class ShoutController {
   constructor(private readonly shoutService: ShoutService) {}
