@@ -162,7 +162,7 @@ export class AuthService {
         success: true,
         statusCode: 201,
         message: 'We have sent an OTP code to your email',
-        OTP: token, // remove this line in production
+        // OTP: token, // remove this line in production
       };
 
       // ----------------------------------------------------
