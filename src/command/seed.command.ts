@@ -1,9 +1,9 @@
 // external imports
 import { Command, CommandRunner } from 'nest-commander';
+import * as bcrypt from 'bcrypt';
 // internal imports
 import appConfig from '../config/app.config';
 import { StringHelper } from '../common/helper/string.helper';
-import { UserRepository } from '../common/repository/user/user.repository';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Command({ name: 'seed', description: 'prisma db seed' })
@@ -37,14 +37,38 @@ export class SeedCommand extends CommandRunner {
   //---- user section ----
   async userSeed() {
     // system admin, user id: 1
-    const systemUser = await UserRepository.createSuAdminUser({
-      username: appConfig().defaultUser.system.username,
-      email: appConfig().defaultUser.system.email,
-      password: appConfig().defaultUser.system.password,
+    const systemUserData = appConfig().defaultUser.system;
+    const hashedPassword = await bcrypt.hash(
+      systemUserData.password,
+      appConfig().security.salt,
+    );
+
+    const systemUser = await this.prisma.user.upsert({
+      where: {
+        email: systemUserData.email,
+      },
+      update: {
+        username: systemUserData.username,
+        password: hashedPassword,
+        type: 'su_admin',
+      },
+      create: {
+        username: systemUserData.username,
+        email: systemUserData.email,
+        password: hashedPassword,
+        type: 'su_admin',
+      },
     });
 
-    await this.prisma.roleUser.create({
-      data: {
+    await this.prisma.roleUser.upsert({
+      where: {
+        role_id_user_id: {
+          role_id: '1',
+          user_id: systemUser.id,
+        },
+      },
+      update: {},
+      create: {
         user_id: systemUser.id,
         role_id: '1',
       },
@@ -100,9 +124,24 @@ export class SeedCommand extends CommandRunner {
       }
     }
 
-    await this.prisma.permission.createMany({
-      data: permissions,
-    });
+    for (const permission of permissions) {
+      await this.prisma.permission.upsert({
+        where: {
+          id: permission.id,
+        },
+        update: {
+          title: permission.title,
+          action: permission.action,
+          subject: permission.subject,
+        },
+        create: {
+          id: permission.id,
+          title: permission.title,
+          action: permission.action,
+          subject: permission.subject,
+        },
+      });
+    }
   }
 
   async permissionRoleSeed() {
@@ -120,9 +159,21 @@ export class SeedCommand extends CommandRunner {
         permission_id: su_admin_permission.id,
       });
     }
-    await this.prisma.permissionRole.createMany({
-      data: adminPermissionRoleArray,
-    });
+    for (const item of adminPermissionRoleArray) {
+      await this.prisma.permissionRole.upsert({
+        where: {
+          permission_id_role_id: {
+            permission_id: item.permission_id,
+            role_id: item.role_id,
+          },
+        },
+        update: {},
+        create: {
+          permission_id: item.permission_id,
+          role_id: item.role_id,
+        },
+      });
+    }
     // -----------
 
     // ---admin---
@@ -139,9 +190,21 @@ export class SeedCommand extends CommandRunner {
         permission_id: admin_permission.id,
       });
     }
-    await this.prisma.permissionRole.createMany({
-      data: projectAdminPermissionRoleArray,
-    });
+    for (const item of projectAdminPermissionRoleArray) {
+      await this.prisma.permissionRole.upsert({
+        where: {
+          permission_id_role_id: {
+            permission_id: item.permission_id,
+            role_id: item.role_id,
+          },
+        },
+        update: {},
+        create: {
+          permission_id: item.permission_id,
+          role_id: item.role_id,
+        },
+      });
+    }
     // -----------
 
     // ---project manager---
@@ -164,9 +227,21 @@ export class SeedCommand extends CommandRunner {
         permission_id: project_manager_permission.id,
       });
     }
-    await this.prisma.permissionRole.createMany({
-      data: projectManagerPermissionRoleArray,
-    });
+    for (const item of projectManagerPermissionRoleArray) {
+      await this.prisma.permissionRole.upsert({
+        where: {
+          permission_id_role_id: {
+            permission_id: item.permission_id,
+            role_id: item.role_id,
+          },
+        },
+        update: {},
+        create: {
+          permission_id: item.permission_id,
+          role_id: item.role_id,
+        },
+      });
+    }
     // -----------
 
     // ---member---
@@ -188,9 +263,21 @@ export class SeedCommand extends CommandRunner {
         permission_id: project_manager_permission.id,
       });
     }
-    await this.prisma.permissionRole.createMany({
-      data: memberPermissionRoleArray,
-    });
+    for (const item of memberPermissionRoleArray) {
+      await this.prisma.permissionRole.upsert({
+        where: {
+          permission_id_role_id: {
+            permission_id: item.permission_id,
+            role_id: item.role_id,
+          },
+        },
+        update: {},
+        create: {
+          permission_id: item.permission_id,
+          role_id: item.role_id,
+        },
+      });
+    }
     // -----------
 
     // ---viewer---
@@ -210,43 +297,70 @@ export class SeedCommand extends CommandRunner {
         permission_id: viewer_permission.id,
       });
     }
-    await this.prisma.permissionRole.createMany({
-      data: viewerPermissionRoleArray,
-    });
+    for (const item of viewerPermissionRoleArray) {
+      await this.prisma.permissionRole.upsert({
+        where: {
+          permission_id_role_id: {
+            permission_id: item.permission_id,
+            role_id: item.role_id,
+          },
+        },
+        update: {},
+        create: {
+          permission_id: item.permission_id,
+          role_id: item.role_id,
+        },
+      });
+    }
     // -----------
   }
 
   async roleSeed() {
-    await this.prisma.role.createMany({
-      data: [
-        // system role
-        {
-          id: '1',
-          title: 'Super Admin', // system admin, do not assign to a tenant/user
-          name: 'su_admin',
+    const roles = [
+      // system role
+      {
+        id: '1',
+        title: 'Super Admin', // system admin, do not assign to a tenant/user
+        name: 'su_admin',
+      },
+      // organization role
+      {
+        id: '2',
+        title: 'Admin',
+        name: 'admin',
+      },
+      {
+        id: '3',
+        title: 'Project Manager',
+        name: 'project_manager',
+      },
+      {
+        id: '4',
+        title: 'Member',
+        name: 'member',
+      },
+      {
+        id: '5',
+        title: 'Viewer',
+        name: 'viewer',
+      },
+    ];
+
+    for (const role of roles) {
+      await this.prisma.role.upsert({
+        where: {
+          id: role.id,
         },
-        // organization role
-        {
-          id: '2',
-          title: 'Admin',
-          name: 'admin',
+        update: {
+          title: role.title,
+          name: role.name,
         },
-        {
-          id: '3',
-          title: 'Project Manager',
-          name: 'project_manager',
+        create: {
+          id: role.id,
+          title: role.title,
+          name: role.name,
         },
-        {
-          id: '4',
-          title: 'Member',
-          name: 'member',
-        },
-        {
-          id: '5',
-          title: 'Viewer',
-          name: 'viewer',
-        },
-      ],
-    });
+      });
+    }
   }
 }
