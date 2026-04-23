@@ -62,7 +62,7 @@ export class AuthService {
       );
       if (!isAllowed) {
         throw new ForbiddenException(
-          'Access restricted to Bangladesh and Nigeria only.',
+          'Access restricted to Bangladesh, Nigeria and USA only.',
         );
       }
 
@@ -494,7 +494,7 @@ export class AuthService {
 
         if (!isAllowed) {
           throw new ForbiddenException(
-            'Access restricted to Bangladesh and Nigeria only.',
+            'Access restricted to Bangladesh, Nigeria and USA only.',
           );
         }
       }
@@ -642,7 +642,7 @@ export class AuthService {
           return {
             success: false,
             statusCode: 403,
-            message: 'Access restricted to Bangladesh and Nigeria only.',
+            message: 'Access restricted to Bangladesh, Nigeria and USA only.',
           };
         }
       }
