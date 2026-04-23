@@ -27,7 +27,15 @@ export class LocationService {
               component.long_name === 'Bangladesh' || 
               component.short_name === 'BD' ||
               component.long_name === 'Nigeria' || 
-              component.short_name === 'NG'
+              component.short_name === 'NG' ||
+              component.long_name === 'Kenya' || 
+              component.short_name === 'KE' || 
+              component.long_name === 'America' ||
+              component.short_name === 'US' ||
+              component.long_name === 'United States' ||
+              component.short_name === 'USA' ||
+              component.long_name === 'United States of America' ||
+              component.short_name === 'US'           
             ) {
               return true;
             }
