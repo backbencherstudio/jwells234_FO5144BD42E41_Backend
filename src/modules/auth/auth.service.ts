@@ -56,15 +56,15 @@ export class AuthService {
   }) {
     try {
       // Check location
-      const isAllowed = await LocationService.isLocationAllowed(
-        latitude,
-        longitude,
-      );
-      if (!isAllowed) {
-        throw new ForbiddenException(
-          'Access restricted to Bangladesh, Nigeria and USA only.',
-        );
-      }
+      // const isAllowed = await LocationService.isLocationAllowed(
+      //   latitude,
+      //   longitude,
+      // );
+      // if (!isAllowed) {
+      //   throw new ForbiddenException(
+      //     'Access restricted to Bangladesh, Nigeria and USA only.',
+      //   );
+      // }
 
       // Check if email already exist
       const userEmailExist = await UserRepository.exist({
@@ -487,16 +487,16 @@ export class AuthService {
           throw new ForbiddenException('Location coordinates are required.');
         }
 
-        const isAllowed = await LocationService.isLocationAllowed(
-          latitude,
-          longitude,
-        );
+        // const isAllowed = await LocationService.isLocationAllowed(
+        //   latitude,
+        //   longitude,
+        // );
 
-        if (!isAllowed) {
-          throw new ForbiddenException(
-            'Access restricted to Bangladesh, Nigeria and USA only.',
-          );
-        }
+        // if (!isAllowed) {
+        //   throw new ForbiddenException(
+        //     'Access restricted to Bangladesh, Nigeria and USA only.',
+        //   );
+        // }
       }
 
       const payload = { email: email, sub: userId };
@@ -633,18 +633,18 @@ export class AuthService {
           };
         }
 
-        const isAllowed = await LocationService.isLocationAllowed(
-          latitude,
-          longitude,
-        );
+        // const isAllowed = await LocationService.isLocationAllowed(
+        //   latitude,
+        //   longitude,
+        // );
 
-        if (!isAllowed) {
-          return {
-            success: false,
-            statusCode: 403,
-            message: 'Access restricted to Bangladesh, Nigeria and USA only.',
-          };
-        }
+        // if (!isAllowed) {
+        //   return {
+        //     success: false,
+        //     statusCode: 403,
+        //     message: 'Access restricted to Bangladesh, Nigeria and USA only.',
+        //   };
+        // }
       }
 
       const payload = { email: userDetails.email, sub: userDetails.id };
