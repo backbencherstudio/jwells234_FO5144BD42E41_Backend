@@ -7,6 +7,7 @@ import { SazedStorage } from '../../common/lib/Disk/SazedStorage';
 import { StringHelper } from '../../common/helper/string.helper';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { NotificationService } from '../application/notification/notification.service';
+import { UserStatus } from '@prisma/client';
 
 @Injectable()
 export class ShoutService {
@@ -42,6 +43,44 @@ export class ShoutService {
       console.error('Error transforming shout:', error);
       return shout;
     }
+  }
+
+  private async getHiddenUserIds(currentUserId: string) {
+    const [blockedUsers, bannedUsers] = await Promise.all([
+      this.prisma.userBlock.findMany({
+        where: {
+          blocker_user_id: currentUserId,
+          deleted_at: null,
+        },
+        select: { blocked_user_id: true },
+      }),
+      this.prisma.user.findMany({
+        where: {
+          status: UserStatus.BANNED,
+          deleted_at: null,
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    return new Set([
+      ...blockedUsers.map((item) => item.blocked_user_id),
+      ...bannedUsers.map((item) => item.id),
+    ]);
+  }
+
+  private isHiddenShout(shout: any, hiddenUserIds: Set<string>) {
+    if (!shout) {
+      return true;
+    }
+
+    const originalAuthorId = shout.original_shout?.user_id;
+    return (
+      hiddenUserIds.has(shout.user_id) ||
+      hiddenUserIds.has(originalAuthorId) ||
+      shout.user?.status === UserStatus.BANNED ||
+      shout.original_shout?.user?.status === UserStatus.BANNED
+    );
   }
 
   async createPost(
@@ -184,13 +223,20 @@ export class ShoutService {
 
   async getAllPosts(userId: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
+    const hiddenUserIds = await this.getHiddenUserIds(userId);
     const shouts = await this.prisma.shout.findMany({
       skip,
       take: limit,
       orderBy: { created_at: 'desc' },
       include: {
         user: {
-          select: { id: true, name: true, username: true, avatar: true },
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatar: true,
+            status: true,
+          },
         },
         medias: true,
         _count: { select: { likes: true, comments: true, shares: true } },
@@ -199,7 +245,13 @@ export class ShoutService {
         original_shout: {
           include: {
             user: {
-              select: { id: true, name: true, username: true, avatar: true },
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                avatar: true,
+                status: true,
+              },
             },
             medias: true,
             _count: { select: { likes: true, comments: true, shares: true } },
@@ -209,7 +261,9 @@ export class ShoutService {
       },
     });
 
-    const transformedShouts = shouts.map((shout) => {
+    const transformedShouts = shouts
+      .filter((shout) => !this.isHiddenShout(shout, hiddenUserIds))
+      .map((shout) => {
       const transformed = this.transformShout(shout, userId);
       if (shout.original_shout) {
         transformed.original_shout = this.transformShout(
@@ -252,10 +306,20 @@ export class ShoutService {
         country: true,
         city: true,
         state: true,
+        status: true,
         created_at: true,
       },
     });
     if (!user) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'User not found',
+      };
+    }
+
+    const hiddenUserIds = await this.getHiddenUserIds(currentUserId);
+    if (hiddenUserIds.has(targetUserId) || user.status === UserStatus.BANNED) {
       return {
         success: false,
         statusCode: 404,
@@ -287,6 +351,7 @@ export class ShoutService {
             name: true,
             username: true,
             avatar: true,
+            status: true,
           },
         },
         medias: true,
@@ -305,7 +370,13 @@ export class ShoutService {
         original_shout: {
           include: {
             user: {
-              select: { id: true, name: true, username: true, avatar: true },
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                avatar: true,
+                status: true,
+              },
             },
             medias: true,
             _count: { select: { likes: true, comments: true, shares: true } },
@@ -315,7 +386,9 @@ export class ShoutService {
       },
     });
 
-    const transformedShouts = shouts.map((shout) => {
+    const transformedShouts = shouts
+      .filter((shout) => !this.isHiddenShout(shout, hiddenUserIds))
+      .map((shout) => {
       const transformed = this.transformShout(shout, currentUserId);
       if (shout.original_shout) {
         transformed.original_shout = this.transformShout(
@@ -337,6 +410,7 @@ export class ShoutService {
   }
 
 async getPostById(id: string, userId: string) {
+  const hiddenUserIds = await this.getHiddenUserIds(userId);
   const shout = await this.prisma.shout.findUnique({
     where: { id },
     include: {
@@ -346,6 +420,7 @@ async getPostById(id: string, userId: string) {
           name: true,
           username: true,
           avatar: true,
+          status: true,
         },
       },
       medias: true,
@@ -362,7 +437,15 @@ async getPostById(id: string, userId: string) {
       },
       original_shout: {
         include: {
-          user: { select: { id: true, name: true, username: true, avatar: true } },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+              status: true,
+            },
+          },
           medias: true,
           _count: { select: { likes: true, comments: true, shares: true } },
           likes: { where: { user_id: userId }, select: { id: true } },
@@ -372,6 +455,14 @@ async getPostById(id: string, userId: string) {
   });
 
   if (!shout) {
+    return {
+      success: false,
+      statusCode: 404,
+      message: 'Shout not found',
+    };
+  }
+
+  if (this.isHiddenShout(shout, hiddenUserIds)) {
     return {
       success: false,
       statusCode: 404,

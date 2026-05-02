@@ -108,6 +108,10 @@ model User {
   reports_made     UserReport[] @relation("reporter")
   reports_received UserReport[] @relation("reported")
 
+  // User block relations
+  blocked_users    UserBlock[] @relation("blocker")
+  blocked_by_users UserBlock[] @relation("blocked")
+
   saved_locations SavedLocation[]
 
   @@map("users")
@@ -733,6 +737,22 @@ model UserReport {
 
   @@unique([reporter_id, reported_id])
   @@map("user_reports")
+}
+
+model UserBlock {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  deleted_at DateTime?
+
+  blocker_user_id String
+  blocker_user    User @relation("blocker", fields: [blocker_user_id], references: [id], onDelete: Cascade)
+
+  blocked_user_id String
+  blocked_user    User @relation("blocked", fields: [blocked_user_id], references: [id], onDelete: Cascade)
+
+  @@unique([blocker_user_id, blocked_user_id])
+  @@map("user_blocks")
 }
 
 model SavedLocation {
