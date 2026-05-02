@@ -670,6 +670,87 @@ export class AuthController {
     }
   }
 
+  @ApiOperation({ summary: 'Block a user for me only' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('block-user-for-me-only')
+  async blockUserForMeOnly(
+    @GetUser() user,
+    @Body()
+    data: {
+      blocked_user_id: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const blocking_user_id = user.userId;
+      console.log('blocking_user_id', blocking_user_id);
+
+      const blocked_user_id = data.blocked_user_id;
+      if (!blocked_user_id) {
+        throw new HttpException(
+          'Blocked user ID not provided',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      const response = await this.authService.blockUserForMeOnly(
+        blocked_user_id,
+        blocking_user_id,
+      );
+      return this.sendResponse(res, response);
+    } catch (error) {
+      return this.sendError(res, error, 'Failed to block user');
+    }
+  }
+
+  @ApiOperation({ summary: 'Get my blocked users' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('my-blocked-users')
+  async getBlockedUsersForMe(@GetUser() user, @Res() res: Response) {
+    try {
+      console.log('user id', user.userId);
+
+      const response = await this.authService.getBlockedUsersForMe(user.userId);
+      return this.sendResponse(res, response);
+    } catch (error) {
+      return this.sendError(res, error, 'Failed to fetch blocked users');
+    }
+  }
+
+  @ApiOperation({ summary: 'Unblock a user for me only' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('unblock-user')
+  async unblockUserForMeOnly(
+    @GetUser() user,
+    @Body()
+    data: {
+      blocked_user_id: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const blocking_user_id = user.userId;
+      console.log('blocking_user_id', blocking_user_id);
+
+      const blocked_user_id = data.blocked_user_id;
+      if (!blocked_user_id) {
+        throw new HttpException(
+          'Blocked user ID not provided',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      const response = await this.authService.unblockUserForMeOnly(
+        blocked_user_id,
+        blocking_user_id,
+      );
+      return this.sendResponse(res, response);
+    } catch (error) {
+      return this.sendError(res, error, 'Failed to unblock user');
+    }
+  }
+
   // ======================================== mobile only google login (Flutter) ==============================================
   @ApiOperation({ summary: 'Google login (mobile - Flutter idToken)' })
   @Post('google/mobile')

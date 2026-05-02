@@ -1431,6 +1431,149 @@ export class AuthService {
     }
   }
 
+  async blockUserForMeOnly(
+    blocked_user_id: string,
+    blocker_user_id: string,
+  ) {
+    try {
+      if (blocked_user_id === blocker_user_id) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'You cannot block yourself',
+        };
+      }
+
+      const [blocker, blocked] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: blocker_user_id },
+          select: { id: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: blocked_user_id },
+          select: { id: true },
+        }),
+      ]);
+
+      if (!blocker || !blocked) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'User not found',
+        };
+      }
+
+      await this.prisma.userBlock.upsert({
+        where: {
+          blocker_user_id_blocked_user_id: {
+            blocker_user_id: blocker_user_id,
+            blocked_user_id: blocked_user_id,
+          },
+        },
+        update: {
+          deleted_at: null,
+        },
+        create: {
+          blocker_user_id: blocker_user_id,
+          blocked_user_id: blocked_user_id,
+        },
+      });
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'User blocked successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
+  }
+
+  async unblockUserForMeOnly(
+    blocked_user_id: string,
+    blocker_user_id: string,
+  ) {
+    try {
+      if (blocked_user_id === blocker_user_id) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'You cannot unblock yourself',
+        };
+      }
+
+      await this.prisma.userBlock.updateMany({
+        where: {
+          blocker_user_id: blocker_user_id,
+          blocked_user_id: blocked_user_id,
+          deleted_at: null,
+        },
+        data: {
+          deleted_at: new Date(),
+        },
+      });
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'User unblocked successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
+  }
+
+  async getBlockedUsersForMe(blocker_user_id: string) {
+    try {
+      const blockedUsers = await this.prisma.userBlock.findMany({
+        where: {
+          blocker_user_id: blocker_user_id,
+          deleted_at: null,
+        },
+        orderBy: { created_at: 'desc' },
+        include: {
+          blocked_user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      return {
+        success: true,
+        statusCode: 200,
+        data: blockedUsers.map((item) => ({
+          id: item.blocked_user.id,
+          name: item.blocked_user.name,
+          username: item.blocked_user.username,
+          avatar: item.blocked_user.avatar,
+          status: item.blocked_user.status,
+          blocked_at: item.created_at,
+        })),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
+  }
+
+
   //  =====================================================================
   async handleGoogleProfile(input: {
     googleId: string;
