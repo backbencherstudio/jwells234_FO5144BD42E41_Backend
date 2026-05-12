@@ -684,19 +684,20 @@ export class AuthController {
   ) {
     try {
       const blocking_user_id = user.userId;
-      console.log('blocking_user_id', blocking_user_id);
-
       const blocked_user_id = data.blocked_user_id;
+
       if (!blocked_user_id) {
         throw new HttpException(
           'Blocked user ID not provided',
           HttpStatus.UNAUTHORIZED,
         );
       }
+
       const response = await this.authService.blockUserForMeOnly(
         blocked_user_id,
         blocking_user_id,
       );
+
       return this.sendResponse(res, response);
     } catch (error) {
       return this.sendError(res, error, 'Failed to block user');
@@ -709,9 +710,8 @@ export class AuthController {
   @Get('my-blocked-users')
   async getBlockedUsersForMe(@GetUser() user, @Res() res: Response) {
     try {
-      console.log('user id', user.userId);
-
       const response = await this.authService.getBlockedUsersForMe(user.userId);
+
       return this.sendResponse(res, response);
     } catch (error) {
       return this.sendError(res, error, 'Failed to fetch blocked users');
@@ -732,19 +732,20 @@ export class AuthController {
   ) {
     try {
       const blocking_user_id = user.userId;
-      console.log('blocking_user_id', blocking_user_id);
-
       const blocked_user_id = data.blocked_user_id;
+
       if (!blocked_user_id) {
         throw new HttpException(
           'Blocked user ID not provided',
           HttpStatus.UNAUTHORIZED,
         );
       }
+
       const response = await this.authService.unblockUserForMeOnly(
         blocked_user_id,
         blocking_user_id,
       );
+
       return this.sendResponse(res, response);
     } catch (error) {
       return this.sendError(res, error, 'Failed to unblock user');
