@@ -1526,7 +1526,7 @@ export class AuthService {
       return {
         success: false,
         statusCode: 500,
-        message: error.message,
+        message: error.message, 
       };
     }
   }
