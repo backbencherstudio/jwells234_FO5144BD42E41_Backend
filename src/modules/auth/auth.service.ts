@@ -1431,10 +1431,7 @@ export class AuthService {
     }
   }
 
-  async blockUserForMeOnly(
-    blocked_user_id: string,
-    blocker_user_id: string,
-  ) {
+  async blockUserForMeOnly(blocked_user_id: string, blocker_user_id: string) {
     try {
       if (blocked_user_id === blocker_user_id) {
         return {
@@ -1493,10 +1490,7 @@ export class AuthService {
     }
   }
 
-  async unblockUserForMeOnly(
-    blocked_user_id: string,
-    blocker_user_id: string,
-  ) {
+  async unblockUserForMeOnly(blocked_user_id: string, blocker_user_id: string) {
     try {
       if (blocked_user_id === blocker_user_id) {
         return {
@@ -1572,7 +1566,6 @@ export class AuthService {
       };
     }
   }
-
 
   //  =====================================================================
   async handleGoogleProfile(input: {
