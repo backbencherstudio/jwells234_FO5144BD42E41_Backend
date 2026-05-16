@@ -1,6 +1,10 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotificationGateway } from './notification.gateway';
+import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
+import { UnregisterDeviceTokenDto } from './dto/unregister-device-token.dto';
 
 @Injectable()
 export class NotificationService {
@@ -8,6 +12,8 @@ export class NotificationService {
     private prisma: PrismaService,
     @Inject(forwardRef(() => NotificationGateway))
     private notificationGateway: NotificationGateway,
+    @InjectQueue('push-queue')
+    private readonly pushQueue: Queue,
   ) {}
 
   async createNotification(data: {
@@ -48,7 +54,69 @@ export class NotificationService {
       notification,
     );
 
+    await this.enqueuePushForUser(data.receiver_id, notification);
+
     return notification;
+  }
+
+  async registerDeviceToken(userId: string, payload: RegisterDeviceTokenDto) {
+    try {
+      const token = payload.token.trim();
+
+      await this.prisma.deviceToken.upsert({
+        where: { token },
+        update: {
+          user_id: userId,
+          platform: payload.platform,
+          deleted_at: null,
+        },
+        create: {
+          user_id: userId,
+          token,
+          platform: payload.platform,
+        },
+      });
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Device token registered successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
+  }
+
+  async unregisterDeviceToken(
+    userId: string,
+    payload: UnregisterDeviceTokenDto,
+  ) {
+    try {
+      const token = payload.token.trim();
+
+      await this.prisma.deviceToken.deleteMany({
+        where: {
+          user_id: userId,
+          token,
+        },
+      });
+
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Device token unregistered successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        statusCode: 500,
+        message: error.message,
+      };
+    }
   }
 
   async getAllNotifications(userId: string) {
@@ -324,5 +392,55 @@ export class NotificationService {
         message: 'Failed to delete notification',
       };
     }
+  }
+
+  private async enqueuePushForUser(receiverId: string, notification: any) {
+    const tokens = await this.prisma.deviceToken.findMany({
+      where: {
+        user_id: receiverId,
+        deleted_at: null,
+      },
+      select: {
+        token: true,
+      },
+    });
+
+    if (!tokens.length) {
+      return;
+    }
+
+    const title = notification?.sender?.name
+      ? `${notification.sender.name}`
+      : 'New notification';
+
+    const body = notification?.notification_event?.text || 'You have an update';
+
+    const data = this.toFcmData({
+      notification_id: notification.id,
+      receiver_id: receiverId,
+      sender_id: notification.sender_id,
+      type: notification?.notification_event?.type,
+      entity_id: notification.entity_id,
+    });
+
+    await this.pushQueue.add('sendPushToUser', {
+      receiver_id: receiverId,
+      tokens: tokens.map((item) => item.token),
+      title,
+      body,
+      data,
+    });
+  }
+
+  private toFcmData(input: Record<string, any>) {
+    const mapped: Record<string, string> = {};
+
+    Object.entries(input || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        mapped[key] = String(value);
+      }
+    });
+
+    return mapped;
   }
 }

@@ -111,6 +111,7 @@ model User {
   // User block relations
   blocked_users    UserBlock[] @relation("blocker")
   blocked_by_users UserBlock[] @relation("blocked")
+  device_tokens    DeviceToken[]
 
   saved_locations SavedLocation[]
 
@@ -245,6 +246,22 @@ model Notification {
   entity_id String?
 
   @@map("notifications")
+}
+
+model DeviceToken {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+
+  token    String @unique
+  platform String?
+
+  user_id String?
+  user    User?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("device_tokens")
 }
 
 model UserPaymentMethod {

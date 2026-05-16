@@ -65,6 +65,15 @@ export default () => ({
     adminEmail: process.env.ADMIN_EMAIL,
   },
 
+  firebase: {
+    pushEnabled: (process.env.FIREBASE_PUSH_ENABLED || 'true') === 'true',
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY,
+    serviceAccountBase64: process.env.FIREBASE_SERVICE_ACCOUNT_BASE64,
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
+  },
+
   auth: {
     google: {
       app_id: process.env.GOOGLE_APP_ID,

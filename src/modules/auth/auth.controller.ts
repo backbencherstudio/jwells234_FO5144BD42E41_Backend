@@ -21,6 +21,8 @@ import {
   FileInterceptor,
 } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
+import { NotificationService } from '../application/notification/notification.service';
+import { RegisterDeviceTokenDto } from '../application/notification/dto/register-device-token.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
@@ -36,7 +38,10 @@ import { AppleMobileDto } from './dto/apple-mobile.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private notificationService: NotificationService,
+  ) {}
 
   private getResponseStatusCode(payload: unknown): number | undefined {
     if (!payload || typeof payload !== 'object') return undefined;
@@ -190,6 +195,26 @@ export class AuthController {
         latitude,
         longitude,
       });
+
+      // Auto-register device token if provided (mobile clients)
+      try {
+        const deviceToken =
+          (req.body && (req.body.device_token || req.body.token)) ||
+          req.headers['x-device-token'];
+        const devicePlatform =
+          (req.body && (req.body.device_platform || req.body.platform)) ||
+          req.headers['x-device-platform'];
+
+        if (deviceToken) {
+          await this.notificationService.registerDeviceToken(user_id, {
+            token: String(deviceToken),
+            platform: devicePlatform ? String(devicePlatform) : undefined,
+          } as RegisterDeviceTokenDto);
+        }
+      } catch (err) {
+        // non-fatal: do not block login if token registration fails
+        console.warn('Device token registration failed:', err?.message || err);
+      }
 
       // store to secure cookies
       res.cookie('refresh_token', response.authorization.refresh_token, {
@@ -759,10 +784,27 @@ export class AuthController {
   async googleMobile(
     @Req() req: Request,
     @Res() res: Response,
-    @Body() _body: GoogleMobileDto,
+    @Body() body: GoogleMobileDto,
   ) {
     // Strategy returns final payload as req.user
-    return this.sendResponse(res, req.user);
+    const resp = req.user as any;
+    // try to register device token if provided
+    try {
+      const bodyAny = body as any;
+      const deviceToken = bodyAny?.device_token || bodyAny?.token || req.headers['x-device-token'];
+      const devicePlatform = bodyAny?.device_platform || bodyAny?.platform || req.headers['x-device-platform'];
+      const userId = resp?.user?.id || resp?.userId || resp?.id;
+      if (deviceToken && userId) {
+        await this.notificationService.registerDeviceToken(userId, {
+          token: String(deviceToken),
+          platform: devicePlatform ? String(devicePlatform) : undefined,
+        } as RegisterDeviceTokenDto);
+      }
+    } catch (err) {
+      console.warn('Google mobile device token registration failed:', err?.message || err);
+    }
+
+    return this.sendResponse(res, resp);
   }
 
   @ApiOperation({ summary: 'Apple login (mobile - Flutter identityToken)' })
@@ -771,9 +813,24 @@ export class AuthController {
   async appleMobile(
     @Req() req: Request,
     @Res() res: Response,
-    @Body() _body: AppleMobileDto,
+    @Body() body: AppleMobileDto,
   ) {
-    // Strategy returns final payload as req.user
-    return this.sendResponse(res, req.user);
+    const resp = req.user as any;
+    try {
+      const bodyAny = body as any;
+      const deviceToken = bodyAny?.device_token || bodyAny?.token || req.headers['x-device-token'];
+      const devicePlatform = bodyAny?.device_platform || bodyAny?.platform || req.headers['x-device-platform'];
+      const userId = resp?.user?.id || resp?.userId || resp?.id;
+      if (deviceToken && userId) {
+        await this.notificationService.registerDeviceToken(userId, {
+          token: String(deviceToken),
+          platform: devicePlatform ? String(devicePlatform) : undefined,
+        } as RegisterDeviceTokenDto);
+      }
+    } catch (err) {
+      console.warn('Apple mobile device token registration failed:', err?.message || err);
+    }
+
+    return this.sendResponse(res, resp);
   }
 }
