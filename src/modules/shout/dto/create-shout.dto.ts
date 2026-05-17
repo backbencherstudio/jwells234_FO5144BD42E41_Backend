@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateShoutDto {
@@ -14,18 +14,18 @@ export class CreateShoutDto {
   category?: string;
 
   @ApiProperty({ required: false })
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   location?: string;
 
   @ApiProperty({ required: false })
-  @IsOptional()
+  @IsNotEmpty()
   @Transform(({ value }) => parseFloat(value))
   @IsNumber()
   latitude?: number;
 
   @ApiProperty({ required: false })
-  @IsOptional()
+  @IsNotEmpty()
   @Transform(({ value }) => parseFloat(value))
   @IsNumber()
   longitude?: number;
