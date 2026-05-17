@@ -224,10 +224,95 @@ export class ShoutService {
   async getAllPosts(userId: string, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
     const hiddenUserIds = await this.getHiddenUserIds(userId);
-    const shouts = await this.prisma.shout.findMany({
-      skip,
-      take: limit,
-      orderBy: { created_at: 'desc' },
+    // Try to get the requesting user's coordinates. If not present, fall back to time-based feed.
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { latitude: true, longitude: true },
+    });
+
+    // Helper: compute Haversine distance (meters)
+    const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const toRad = (v: number) => (v * Math.PI) / 180;
+      const R = 6371000; // Earth radius in meters
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    // If user has no location, preserve existing behavior (recent first)
+    if (!currentUser || currentUser.latitude == null || currentUser.longitude == null) {
+      const shouts = await this.prisma.shout.findMany({
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              avatar: true,
+              status: true,
+            },
+          },
+          medias: true,
+          _count: { select: { likes: true, comments: true, shares: true } },
+          likes: { where: { user_id: userId }, select: { id: true } },
+          original_shout: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  username: true,
+                  avatar: true,
+                  status: true,
+                },
+              },
+              medias: true,
+              _count: { select: { likes: true, comments: true, shares: true } },
+              likes: { where: { user_id: userId }, select: { id: true } },
+            },
+          },
+        },
+      });
+
+      const transformedShouts = shouts
+        .filter((shout) => !this.isHiddenShout(shout, hiddenUserIds))
+        .map((shout) => {
+          const transformed = this.transformShout(shout, userId);
+          if (shout.original_shout) {
+            transformed.original_shout = this.transformShout(
+              shout.original_shout,
+              userId,
+            );
+          }
+          return transformed;
+        });
+
+      return {
+        success: true,
+        statusCode: 200,
+        data: transformedShouts,
+      };
+    }
+
+    // Fetch shouts that have coordinates (nearby feed)
+    // Note: for performance we limit the initial fetch to a reasonable cap and then paginate after sorting.
+    const FETCH_CAP = 2000;
+    const rawShouts = await this.prisma.shout.findMany({
+      where: {
+        latitude: { not: null },
+        longitude: { not: null },
+        deleted_at: null,
+        status: 'PUBLISHED',
+      },
+      take: FETCH_CAP,
       include: {
         user: {
           select: {
@@ -241,7 +326,6 @@ export class ShoutService {
         medias: true,
         _count: { select: { likes: true, comments: true, shares: true } },
         likes: { where: { user_id: userId }, select: { id: true } },
-        // 1️⃣ Include original shout if this shout is a share
         original_shout: {
           include: {
             user: {
@@ -261,9 +345,20 @@ export class ShoutService {
       },
     });
 
-    const transformedShouts = shouts
-      .filter((shout) => !this.isHiddenShout(shout, hiddenUserIds))
-      .map((shout) => {
+    const userLat = Number(currentUser.latitude);
+    const userLon = Number(currentUser.longitude);
+
+    const withDistance = rawShouts
+      .filter((s) => !this.isHiddenShout(s, hiddenUserIds))
+      .map((s) => ({
+        shout: s,
+        distance: haversineDistance(userLat, userLon, Number(s.latitude), Number(s.longitude)),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+
+    const paged = withDistance.slice(skip, skip + limit).map((item) => item.shout);
+
+    const transformedShouts = paged.map((shout) => {
       const transformed = this.transformShout(shout, userId);
       if (shout.original_shout) {
         transformed.original_shout = this.transformShout(
