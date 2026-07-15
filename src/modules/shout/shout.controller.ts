@@ -32,11 +32,11 @@ import { SubscriptionGuard } from 'src/common/guard/subscription.guard';
 
 @ApiTags('shout')
 @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard, SubscriptionGuard)
 @UseGuards(JwtAuthGuard)
 @Controller('shout')
 export class ShoutController {
-  constructor(private readonly shoutService: ShoutService) {}
+  constructor(private readonly shoutService: ShoutService) { }
+
 
   @ApiOperation({ summary: 'Create a new shout' })
   @Post()
@@ -97,6 +97,7 @@ export class ShoutController {
     @GetUser() user,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
+    @Body() body: { latitude?: number; longitude?: number },
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
@@ -104,6 +105,8 @@ export class ShoutController {
         user.userId,
         +page,
         +limit,
+        body?.latitude,
+        body?.longitude,
       );
       if (result.statusCode) {
         res.status(result.statusCode);

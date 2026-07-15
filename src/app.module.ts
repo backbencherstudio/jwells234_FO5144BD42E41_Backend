@@ -25,6 +25,7 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { ShoutModule } from './modules/shout/shout.module';
 import { MapExploreModule } from './modules/map-explore/map-explore.module';
 import { NotificationModule } from './modules/application/notification/notification.module';
+import { RevenueCatModule } from './modules/revenuecat/revenuecat.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { NotificationModule } from './modules/application/notification/notificat
     ShoutModule,
     MapExploreModule,
     NotificationModule,
+    RevenueCatModule,
   ],
   controllers: [AppController],
   providers: [

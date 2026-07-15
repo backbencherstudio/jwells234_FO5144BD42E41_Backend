@@ -14,7 +14,7 @@ export class NotificationService {
     private notificationGateway: NotificationGateway,
     @InjectQueue('push-queue')
     private readonly pushQueue: Queue,
-  ) {}
+  ) { }
 
   async createNotification(data: {
     sender_id?: string;

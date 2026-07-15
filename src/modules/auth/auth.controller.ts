@@ -41,7 +41,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private notificationService: NotificationService,
-  ) {}
+  ) { }
 
   private getResponseStatusCode(payload: unknown): number | undefined {
     if (!payload || typeof payload !== 'object') return undefined;
@@ -204,6 +204,8 @@ export class AuthController {
         const devicePlatform =
           (req.body && (req.body.device_platform || req.body.platform)) ||
           req.headers['x-device-platform'];
+        console.log('deviceToken', deviceToken);
+        console.log('devicePlatform', devicePlatform);
 
         if (deviceToken) {
           await this.notificationService.registerDeviceToken(user_id, {

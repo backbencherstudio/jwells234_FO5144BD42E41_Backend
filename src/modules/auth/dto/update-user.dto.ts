@@ -79,4 +79,18 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
     example: 'This is a sample about me section.',
   })
   about?: string;
+
+  @IsOptional()
+  @ApiProperty({
+    description: 'Token',
+    example: 'token',
+  })
+  device_token?: string;
+
+  @IsOptional()
+  @ApiProperty({
+    description: 'Device Platform',
+    example: 'ios',
+  })
+  device_platform?: string;
 }

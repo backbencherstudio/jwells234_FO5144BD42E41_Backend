@@ -30,16 +30,25 @@ export class PushNotificationProcessor extends WorkerHost {
       return;
     }
 
-    const { tokens, title, body, data } = job.data;
+    const { receiver_id, tokens, title, body, data } = job.data;
 
     if (!tokens?.length) {
+      this.logger.warn(`No tokens provided for receiver_id: ${receiver_id}. Skipping push send.`);
       return;
     }
 
     if (!this.fcmService.isReady()) {
-      this.logger.warn('Firebase is not initialized. Skipping push send.');
+      this.logger.warn(
+        `Firebase is not initialized. Skipping push send to user ${receiver_id}. Title: "${title}"`,
+      );
       return;
     }
+
+    this.logger.log(
+      `Attempting to send push notification to user ${receiver_id}. Title: "${title}", Body: "${body}". Tokens: ${JSON.stringify(
+        tokens,
+      )}`,
+    );
 
     const response = await this.fcmService.sendMulticast({
       tokens,
@@ -48,20 +57,33 @@ export class PushNotificationProcessor extends WorkerHost {
     });
 
     if (!response) {
+      this.logger.error(`FCM multicast returned null response for user ${receiver_id}.`);
       return;
     }
+
+    this.logger.log(
+      `FCM multicast response for user ${receiver_id} - Success count: ${response.successCount}, Failure count: ${response.failureCount}`,
+    );
 
     const invalidTokens: string[] = [];
 
     response.responses.forEach((item, index) => {
+      const token = tokens[index];
       if (!item.success) {
         const errorCode = item.error?.code || '';
+        const errorMessage = item.error?.message || 'Unknown error';
+        this.logger.error(
+          `Failed to send push to token: ${token}. Error Code: ${errorCode}, Message: ${errorMessage}`,
+        );
+
         if (
           errorCode.includes('registration-token-not-registered') ||
           errorCode.includes('invalid-argument')
         ) {
-          invalidTokens.push(tokens[index]);
+          invalidTokens.push(token);
         }
+      } else {
+        this.logger.log(`Successfully sent push to token: ${token}`);
       }
     });
 
@@ -75,7 +97,7 @@ export class PushNotificationProcessor extends WorkerHost {
       });
 
       this.logger.warn(
-        `Removed ${invalidTokens.length} invalid FCM tokens from database`,
+        `Removed ${invalidTokens.length} invalid FCM tokens from database for user ${receiver_id}`,
       );
     }
   }

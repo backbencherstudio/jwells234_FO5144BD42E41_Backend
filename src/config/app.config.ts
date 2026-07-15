@@ -118,6 +118,10 @@ export default () => ({
     trial_days: parseInt(process.env.SUBSCRIPTION_TRIAL_DAYS || '14', 10),
   },
 
+  revenuecat: {
+    webhook_secret: process.env.REVENUECAT_WEBHOOK_SECRET,
+  },
+
   /**
    * Storage directory
    */

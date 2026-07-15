@@ -33,7 +33,7 @@ export class AuthService {
     private prisma: PrismaService,
     private mailService: MailService,
     @InjectRedis() private readonly redis: Redis,
-  ) {}
+  ) { }
 
   async register({
     name,
@@ -233,39 +233,41 @@ export class AuthService {
         };
       }
 
-      // Include current active subscription + minimal plan details
+      // Include current active subscription + minimal plan details to check premium status
       const subscription = await this.prisma.subscription.findFirst({
         where: {
           userId: userId,
-          // OR: [
-          //   { isActive: true },
-          //   {
-          //     status: {
-          //       equals: 'active',
-          //       mode: 'insensitive',
-          //     },
-          //   },
-          // ],
         },
         select: {
           id: true,
           status: true,
           isActive: true,
           type: true,
-          plan: {
-            select: {
-              id: true,
-              name: true,
-              type: true,
-              price: true,
-              currency: true,
-              interval: true,
-              intervalCount: true,
-            },
-          },
+          endDate: true,
         },
         orderBy: {
           createdAt: 'desc',
+        },
+      });
+
+      let isPremium = false;
+      if (subscription && subscription.isActive) {
+        if (subscription.type !== 'FREE') {
+          if (!subscription.endDate || new Date(subscription.endDate) > new Date()) {
+            isPremium = true;
+          }
+        }
+      }
+
+      // Fetch the latest successful RevenueCat webhook transaction data saved for this user
+      const revenueCatTx = await this.prisma.paymentTransaction.findFirst({
+        where: {
+          user_id: userId,
+          provider: 'revenuecat',
+          status: 'success',
+        },
+        orderBy: {
+          created_at: 'desc',
         },
       });
 
@@ -274,7 +276,17 @@ export class AuthService {
         statusCode: 200,
         data: {
           ...user,
-          subscription: subscription || null,
+          subscription: revenueCatTx ? {
+            id: revenueCatTx.id,
+            transactionId: revenueCatTx.reference_number,
+            amount: revenueCatTx.amount,
+            currency: revenueCatTx.currency,
+            store: revenueCatTx.store_id,
+            type: revenueCatTx.type,
+            status: revenueCatTx.status,
+            date: revenueCatTx.created_at,
+          } : null,
+          premium: isPremium,
         },
       };
     } catch (error) {
@@ -336,7 +348,22 @@ export class AuthService {
       if (updateUserDto.latitude && updateUserDto.longitude) {
         data.latitude = updateUserDto.latitude;
         data.longitude = updateUserDto.longitude;
-        data.country = 'Bangladesh';
+      }
+
+      if (updateUserDto.device_token && updateUserDto.device_platform) {
+        await this.prisma.deviceToken.upsert({
+          where: { token: updateUserDto.device_token },
+          update: {
+            user_id: userId,
+            platform: updateUserDto.device_platform,
+            deleted_at: null,
+          },
+          create: {
+            user_id: userId,
+            token: updateUserDto.device_token,
+            platform: updateUserDto.device_platform,
+          },
+        });
       }
 
       let mediaUrl: string | undefined;
@@ -511,6 +538,14 @@ export class AuthService {
         'EX',
         60 * 60 * 24 * 7, // 7 days in seconds
       );
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          latitude: latitude,
+          longitude: longitude,
+        },
+      });
 
       return {
         success: true,

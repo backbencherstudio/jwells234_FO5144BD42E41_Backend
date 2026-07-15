@@ -14,7 +14,7 @@ export class ShoutService {
   constructor(
     private prisma: PrismaService,
     private notificationService: NotificationService,
-  ) {}
+  ) { }
 
   private transformShout(shout: any, userId: string) {
     const isLiked = shout.likes && shout.likes.length > 0;
@@ -125,6 +125,29 @@ export class ShoutService {
       };
     }
 
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId: userId,
+        isActive: true,
+      },
+    });
+
+    if (!subscription) {
+      return {
+        success: false,
+        statusCode: 403,
+        message: 'Active subscription required to post.',
+      };
+    }
+
+    if (subscription.endDate && new Date() > subscription.endDate) {
+      return {
+        success: false,
+        statusCode: 403,
+        message: 'Subscription expired.',
+      };
+    }
+
     const shout = await this.prisma.shout.create({
       data: {
         user_id: userId,
@@ -213,6 +236,12 @@ export class ShoutService {
 
     const createdShout = await this.getPostById(shout.id, userId);
 
+    if (shout.latitude != null && shout.longitude != null) {
+      this.sendNearbyNotifications(userId, shout.id, Number(shout.latitude), Number(shout.longitude)).catch(err => {
+        console.error('Error sending nearby notifications:', err);
+      });
+    }
+
     return {
       success: true,
       statusCode: 201,
@@ -221,14 +250,9 @@ export class ShoutService {
     };
   }
 
-  async getAllPosts(userId: string, page = 1, limit = 10) {
+  async getAllPosts(userId: string, page = 1, limit = 10, latitude?: number, longitude?: number) {
     const skip = (page - 1) * limit;
     const hiddenUserIds = await this.getHiddenUserIds(userId);
-    // Try to get the requesting user's coordinates. If not present, fall back to time-based feed.
-    const currentUser = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { latitude: true, longitude: true },
-    });
 
     // Helper: compute Haversine distance (meters)
     const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -244,8 +268,8 @@ export class ShoutService {
       return R * c;
     };
 
-    // If user has no location, preserve existing behavior (recent first)
-    if (!currentUser || currentUser.latitude == null || currentUser.longitude == null) {
+    // If no coordinates are provided, preserve existing behavior (recent first)
+    if (latitude == null || longitude == null) {
       const shouts = await this.prisma.shout.findMany({
         skip,
         take: limit,
@@ -345,8 +369,8 @@ export class ShoutService {
       },
     });
 
-    const userLat = Number(currentUser.latitude);
-    const userLon = Number(currentUser.longitude);
+    const userLat = Number(latitude);
+    const userLon = Number(longitude);
 
     const withDistance = rawShouts
       .filter((s) => !this.isHiddenShout(s, hiddenUserIds))
@@ -484,15 +508,15 @@ export class ShoutService {
     const transformedShouts = shouts
       .filter((shout) => !this.isHiddenShout(shout, hiddenUserIds))
       .map((shout) => {
-      const transformed = this.transformShout(shout, currentUserId);
-      if (shout.original_shout) {
-        transformed.original_shout = this.transformShout(
-          shout.original_shout,
-          currentUserId,
-        );
-      }
-      return transformed;
-    });
+        const transformed = this.transformShout(shout, currentUserId);
+        if (shout.original_shout) {
+          transformed.original_shout = this.transformShout(
+            shout.original_shout,
+            currentUserId,
+          );
+        }
+        return transformed;
+      });
 
     return {
       success: true,
@@ -504,79 +528,79 @@ export class ShoutService {
     };
   }
 
-async getPostById(id: string, userId: string) {
-  const hiddenUserIds = await this.getHiddenUserIds(userId);
-  const shout = await this.prisma.shout.findUnique({
-    where: { id },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          username: true,
-          avatar: true,
-          status: true,
-        },
-      },
-      medias: true,
-      _count: {
-        select: {
-          likes: true,
-          comments: true,
-          shares: true,
-        },
-      },
-      likes: {
-        where: { user_id: userId },
-        select: { id: true },
-      },
-      original_shout: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              username: true,
-              avatar: true,
-              status: true,
-            },
+  async getPostById(id: string, userId: string) {
+    const hiddenUserIds = await this.getHiddenUserIds(userId);
+    const shout = await this.prisma.shout.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatar: true,
+            status: true,
           },
-          medias: true,
-          _count: { select: { likes: true, comments: true, shares: true } },
-          likes: { where: { user_id: userId }, select: { id: true } },
+        },
+        medias: true,
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+            shares: true,
+          },
+        },
+        likes: {
+          where: { user_id: userId },
+          select: { id: true },
+        },
+        original_shout: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                avatar: true,
+                status: true,
+              },
+            },
+            medias: true,
+            _count: { select: { likes: true, comments: true, shares: true } },
+            likes: { where: { user_id: userId }, select: { id: true } },
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!shout) {
+    if (!shout) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Shout not found',
+      };
+    }
+
+    if (this.isHiddenShout(shout, hiddenUserIds)) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Shout not found',
+      };
+    }
+
+    const transformedShout = this.transformShout(shout, userId);
+
+    if (shout.original_shout) {
+      transformedShout.original_shout = this.transformShout(shout.original_shout, userId);
+    }
+
     return {
-      success: false,
-      statusCode: 404,
-      message: 'Shout not found',
+      success: true,
+      statusCode: 200,
+      data: transformedShout,
     };
   }
-
-  if (this.isHiddenShout(shout, hiddenUserIds)) {
-    return {
-      success: false,
-      statusCode: 404,
-      message: 'Shout not found',
-    };
-  }
-
-  const transformedShout = this.transformShout(shout, userId);
-
-  if (shout.original_shout) {
-    transformedShout.original_shout = this.transformShout(shout.original_shout, userId);
-  }
-
-  return {
-    success: true,
-    statusCode: 200,
-    data: transformedShout,
-  };
-}
 
 
   async updatePost(
@@ -761,31 +785,8 @@ async getPostById(id: string, userId: string) {
         },
       });
 
-      // Notification
-      try {
-        const shout = await this.prisma.shout.findUnique({
-          where: { id },
-          select: { user_id: true },
-        });
+      // Notification removed by request
 
-        if (shout && shout.user_id !== userId) {
-          const liker = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { name: true, username: true },
-          });
-          const likerName = liker?.name || liker?.username || 'Someone';
-
-          await this.notificationService.createNotification({
-            sender_id: userId,
-            receiver_id: shout.user_id,
-            text: `${likerName} liked your shout`,
-            type: 'message',
-            entity_id: id,
-          });
-        }
-      } catch (notifError) {
-        console.error('Error sending like notification:', notifError);
-      }
 
       return {
         success: true,
@@ -1093,26 +1094,8 @@ async getPostById(id: string, userId: string) {
         },
       });
 
-      // Notification
-      try {
-        if (comment.user_id !== userId) {
-          const liker = await this.prisma.user.findUnique({
-            where: { id: userId },
-            select: { name: true, username: true },
-          });
-          const likerName = liker?.name || liker?.username || 'Someone';
+      // Notification removed by request
 
-          await this.notificationService.createNotification({
-            sender_id: userId,
-            receiver_id: comment.user_id,
-            text: `${likerName} liked your comment`,
-            type: 'like_comment',
-            entity_id: commentId, // Or shout_id depending on how FE wants to navigate
-          });
-        }
-      } catch (notifError) {
-        console.error('Error sending comment like notification:', notifError);
-      }
 
       return {
         success: true,
@@ -1253,6 +1236,30 @@ async getPostById(id: string, userId: string) {
   // }
 
   async share(id: string, userId: string, createShoutDto: CreateShoutDto) {
+
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId: userId,
+        isActive: true,
+      },
+    });
+
+    if (!subscription) {
+      return {
+        success: false,
+        statusCode: 403,
+        message: 'Active subscription required to share shout.',
+      };
+    }
+
+    if (subscription.endDate && new Date() > subscription.endDate) {
+      return {
+        success: false,
+        statusCode: 403,
+        message: 'Subscription expired.',
+      };
+    }
+
     // 1️⃣ Fetch the original shout
     const originalShout = await this.prisma.shout.findUnique({
       where: { id },
@@ -1282,6 +1289,9 @@ async getPostById(id: string, userId: string) {
           content: createShoutDto.content, // User can add their own text
           original_shout_id: id,
           is_anonymous: createShoutDto.is_anonymous || false,
+          location: createShoutDto.location,
+          latitude: createShoutDto.latitude,
+          longitude: createShoutDto.longitude,
         },
       });
 
@@ -1306,6 +1316,13 @@ async getPostById(id: string, userId: string) {
         console.error('Error sending share notification:', notifError);
       }
 
+      // Send nearby notifications if location is provided
+      if (sharedShout.latitude != null && sharedShout.longitude != null) {
+        this.sendNearbyNotifications(userId, sharedShout.id, Number(sharedShout.latitude), Number(sharedShout.longitude)).catch(err => {
+          console.error('Error sending nearby notifications for shared shout:', err);
+        });
+      }
+
       // 4️⃣ Transform original shout for response
       const transformShout = (shout) => ({
         ...shout,
@@ -1326,6 +1343,9 @@ async getPostById(id: string, userId: string) {
           content: sharedShout.content,
           user_id: sharedShout.user_id,
           is_anonymous: sharedShout.is_anonymous,
+          location: sharedShout.location,
+          latitude: sharedShout.latitude,
+          longitude: sharedShout.longitude,
           created_at: sharedShout.created_at,
           updated_at: sharedShout.updated_at,
           original_shout: transformShout(originalShout), // embed original shout details
@@ -1394,6 +1414,60 @@ async getPostById(id: string, userId: string) {
         statusCode: 500,
         message: 'Failed to report shout',
       };
+    }
+  }
+
+  async sendNearbyNotifications(creatorId: string, shoutId: string, postLat: number, postLon: number) {
+    const creator = await this.prisma.user.findUnique({
+      where: { id: creatorId },
+      select: { name: true, username: true },
+    });
+    const creatorName = creator?.name || creator?.username || 'Someone';
+
+    const activeUsers = await this.prisma.user.findMany({
+      where: {
+        id: { not: creatorId },
+        status: 'ACTIVE',
+        latitude: { not: null },
+        longitude: { not: null },
+      },
+      select: {
+        id: true,
+        latitude: true,
+        longitude: true,
+      },
+    });
+
+    const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const toRad = (v: number) => (v * Math.PI) / 180;
+      const R = 6371000; // Earth radius in meters
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    const nearbyUsers = activeUsers.filter(user => {
+      const dist = haversineDistance(postLat, postLon, Number(user.latitude), Number(user.longitude));
+      return dist <= 50000; // 50km
+    });
+
+    for (const u of nearbyUsers) {
+      try {
+        await this.notificationService.createNotification({
+          sender_id: creatorId,
+          receiver_id: u.id,
+          text: `${creatorName} created a new shout nearby`,
+          type: 'new_shout_nearby',
+          entity_id: shoutId,
+        });
+      } catch (err) {
+        console.error(`Failed to send shout notification to user ${u.id}:`, err.message);
+      }
     }
   }
 }
