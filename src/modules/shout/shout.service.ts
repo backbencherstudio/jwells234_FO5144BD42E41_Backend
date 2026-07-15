@@ -254,6 +254,17 @@ export class ShoutService {
     const skip = (page - 1) * limit;
     const hiddenUserIds = await this.getHiddenUserIds(userId);
 
+    // Check if the user has an active premium/paid subscription
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId: userId,
+        isActive: true,
+      },
+    });
+
+    const hasSubscription = subscription && subscription.type !== 'FREE' && (!subscription.endDate || new Date(subscription.endDate) > new Date());
+    const orderDirection = hasSubscription ? 'desc' : 'asc';
+
     // Helper: compute Haversine distance (meters)
     const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
       const toRad = (v: number) => (v * Math.PI) / 180;
@@ -268,12 +279,12 @@ export class ShoutService {
       return R * c;
     };
 
-    // If no coordinates are provided, preserve existing behavior (recent first)
+    // If no coordinates are provided, preserve chronological sorting (recent first for subbed, old first for unsubbed)
     if (latitude == null || longitude == null) {
       const shouts = await this.prisma.shout.findMany({
         skip,
         take: limit,
-        orderBy: { created_at: 'desc' },
+        orderBy: { created_at: orderDirection },
         include: {
           user: {
             select: {
@@ -378,7 +389,12 @@ export class ShoutService {
         shout: s,
         distance: haversineDistance(userLat, userLon, Number(s.latitude), Number(s.longitude)),
       }))
-      .sort((a, b) => a.distance - b.distance);
+      .sort((a, b) => {
+        // Sort chronologically based on subscription status (recent vs old)
+        const dateA = new Date(a.shout.created_at).getTime();
+        const dateB = new Date(b.shout.created_at).getTime();
+        return hasSubscription ? dateB - dateA : dateA - dateB;
+      });
 
     const paged = withDistance.slice(skip, skip + limit).map((item) => item.shout);
 
