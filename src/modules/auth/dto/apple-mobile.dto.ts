@@ -37,4 +37,24 @@ export class AppleMobileDto {
   @Type(() => Number)
   @IsNumber()
   longitude?: number;
+
+  @ApiProperty({ required: false, description: 'FCM Device Token' })
+  @IsOptional()
+  @IsString()
+  device_token?: string;
+
+  @ApiProperty({ required: false, description: 'Device Platform (ios/android)' })
+  @IsOptional()
+  @IsString()
+  device_platform?: string;
+
+  @ApiProperty({ required: false, description: 'FCM Device Token (alias)' })
+  @IsOptional()
+  @IsString()
+  token?: string;
+
+  @ApiProperty({ required: false, description: 'Device Platform (alias)' })
+  @IsOptional()
+  @IsString()
+  platform?: string;
 }
