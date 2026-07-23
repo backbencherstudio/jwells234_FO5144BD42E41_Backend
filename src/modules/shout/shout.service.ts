@@ -1440,9 +1440,36 @@ export class ShoutService {
     });
     const creatorName = creator?.name || creator?.username || 'Someone';
 
+    // Fetch block records where creatorId is blocker or blocked
+    const blocks = await this.prisma.userBlock.findMany({
+      where: {
+        OR: [
+          { blocker_user_id: creatorId },
+          { blocked_user_id: creatorId }
+        ],
+        deleted_at: null,
+      },
+      select: {
+        blocker_user_id: true,
+        blocked_user_id: true,
+      }
+    });
+
+    const blockedUserIds = new Set<string>();
+    for (const block of blocks) {
+      if (block.blocker_user_id === creatorId) {
+        blockedUserIds.add(block.blocked_user_id);
+      } else {
+        blockedUserIds.add(block.blocker_user_id);
+      }
+    }
+
     const activeUsers = await this.prisma.user.findMany({
       where: {
-        id: { not: creatorId },
+        id: { 
+          not: creatorId,
+          notIn: Array.from(blockedUserIds),
+        },
         status: 'ACTIVE',
         latitude: { not: null },
         longitude: { not: null },
