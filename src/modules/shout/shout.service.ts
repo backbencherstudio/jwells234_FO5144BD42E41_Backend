@@ -8,6 +8,7 @@ import { StringHelper } from '../../common/helper/string.helper';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { NotificationService } from '../application/notification/notification.service';
 import { UserStatus } from '@prisma/client';
+import { LocationService } from '../../common/lib/LocationService';
 
 @Injectable()
 export class ShoutService {
@@ -111,6 +112,17 @@ export class ShoutService {
       is_anonymous,
       audio_duration,
     } = createShoutDto;
+
+    if (latitude != null && longitude != null) {
+      const allowed = await LocationService.isLocationAllowed(Number(latitude), Number(longitude));
+      if (!allowed) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'Posting shouts from this location is not allowed.',
+        };
+      }
+    }
 
     const userExists = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -262,6 +274,17 @@ export class ShoutService {
     const userLat = dbUser?.latitude ? Number(dbUser.latitude) : null;
     const userLon = dbUser?.longitude ? Number(dbUser.longitude) : null;
 
+    // Fetch user notifications for shouts to check if they have received notifications for them
+    const userNotifications = await this.prisma.notification.findMany({
+      where: {
+        receiver_id: userId,
+        entity_id: { not: null },
+        deleted_at: null,
+      },
+      select: { entity_id: true }
+    });
+    const notifiedShoutIds = new Set(userNotifications.map((n) => n.entity_id));
+
     // Check if the user has an active premium/paid subscription
     const subscription = await this.prisma.subscription.findFirst({
       where: {
@@ -394,6 +417,10 @@ export class ShoutService {
         shout: s,
         distance: haversineDistance(userLat, userLon, Number(s.latitude), Number(s.longitude)),
       }))
+      .filter((item) => {
+        // Show if within 50km OR if user received a notification for it
+        return item.distance <= 50000 || notifiedShoutIds.has(item.shout.id);
+      })
       .sort((a, b) => {
         // Sort chronologically based on subscription status (recent vs old)
         const dateA = new Date(a.shout.created_at).getTime();
@@ -603,6 +630,63 @@ export class ShoutService {
     }
 
     if (this.isHiddenShout(shout, hiddenUserIds)) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: 'Shout not found',
+      };
+    }
+
+    // Access check: creator, within 50km, or received notification
+    const isCreator = shout.user_id === userId;
+    let isWithinRange = false;
+    let hasNotification = false;
+
+    if (!isCreator) {
+      const dbNotification = await this.prisma.notification.findFirst({
+        where: {
+          receiver_id: userId,
+          entity_id: id,
+          deleted_at: null,
+        },
+        select: { id: true }
+      });
+      hasNotification = !!dbNotification;
+
+      if (!hasNotification) {
+        if (shout.latitude != null && shout.longitude != null) {
+          const dbUser = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { latitude: true, longitude: true },
+          });
+          if (dbUser?.latitude != null && dbUser?.longitude != null) {
+            const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+              const toRad = (v: number) => (v * Math.PI) / 180;
+              const R = 6371000; // Earth radius in meters
+              const dLat = toRad(lat2 - lat1);
+              const dLon = toRad(lon2 - lon1);
+              const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              return R * c;
+            };
+            const dist = haversineDistance(
+              Number(dbUser.latitude),
+              Number(dbUser.longitude),
+              Number(shout.latitude),
+              Number(shout.longitude)
+            );
+            isWithinRange = dist <= 50000;
+          }
+        } else {
+          isWithinRange = true;
+        }
+      }
+    }
+
+    if (!isCreator && !hasNotification && !isWithinRange) {
       return {
         success: false,
         statusCode: 404,
@@ -1257,6 +1341,29 @@ export class ShoutService {
   // }
 
   async share(id: string, userId: string, createShoutDto: CreateShoutDto) {
+    const userExists = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, latitude: true, longitude: true },
+    });
+
+    if (!userExists) {
+      return {
+        success: false,
+        statusCode: 401,
+        message: 'Invalid or missing user. Please login again.',
+      };
+    }
+
+    if (userExists.latitude != null && userExists.longitude != null) {
+      const allowed = await LocationService.isLocationAllowed(Number(userExists.latitude), Number(userExists.longitude));
+      if (!allowed) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'Sharing shouts from this location is not allowed.',
+        };
+      }
+    }
 
     const subscription = await this.prisma.subscription.findFirst({
       where: {
@@ -1441,16 +1548,45 @@ export class ShoutService {
   async sendNearbyNotifications(creatorId: string, shoutId: string, postLat: number, postLon: number) {
     const creator = await this.prisma.user.findUnique({
       where: { id: creatorId },
-      select: { name: true, username: true },
+      select: { name: true, username: true, status: true },
     });
+    if (!creator || creator.status === 'BANNED') return;
+
     const creatorName = creator?.name || creator?.username || 'Someone';
 
-    // Fetch block records where creatorId is blocker or blocked
+    // Fetch the shout to check if it's a share and get original author
+    const shout = await this.prisma.shout.findUnique({
+      where: { id: shoutId },
+      select: {
+        original_shout: {
+          select: {
+            user_id: true,
+            user: {
+              select: { status: true }
+            }
+          }
+        }
+      }
+    });
+
+    const originalAuthorId = shout?.original_shout?.user_id;
+    const isOriginalAuthorBanned = shout?.original_shout?.user?.status === 'BANNED';
+
+    if (isOriginalAuthorBanned) {
+      return; // Nobody can see it since the original author is banned
+    }
+
+    const userIdsToCheck = [creatorId];
+    if (originalAuthorId) {
+      userIdsToCheck.push(originalAuthorId);
+    }
+
+    // Fetch block records where creator or original author is blocker or blocked
     const blocks = await this.prisma.userBlock.findMany({
       where: {
         OR: [
-          { blocker_user_id: creatorId },
-          { blocked_user_id: creatorId }
+          { blocker_user_id: { in: userIdsToCheck } },
+          { blocked_user_id: { in: userIdsToCheck } }
         ],
         deleted_at: null,
       },
@@ -1462,18 +1598,22 @@ export class ShoutService {
 
     const blockedUserIds = new Set<string>();
     for (const block of blocks) {
-      if (block.blocker_user_id === creatorId) {
-        blockedUserIds.add(block.blocked_user_id);
-      } else {
-        blockedUserIds.add(block.blocker_user_id);
-      }
+      blockedUserIds.add(block.blocker_user_id);
+      blockedUserIds.add(block.blocked_user_id);
+    }
+
+    const excludeIds = new Set<string>([creatorId]);
+    if (originalAuthorId) {
+      excludeIds.add(originalAuthorId);
+    }
+    for (const id of blockedUserIds) {
+      excludeIds.add(id);
     }
 
     const activeUsers = await this.prisma.user.findMany({
       where: {
-        id: {
-          not: creatorId,
-          notIn: Array.from(blockedUserIds),
+        id: { 
+          notIn: Array.from(excludeIds),
         },
         status: 'ACTIVE',
         latitude: { not: null },
