@@ -254,6 +254,14 @@ export class ShoutService {
     const skip = (page - 1) * limit;
     const hiddenUserIds = await this.getHiddenUserIds(userId);
 
+    const dbUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { latitude: true, longitude: true },
+    });
+
+    const userLat = dbUser?.latitude ? Number(dbUser.latitude) : null;
+    const userLon = dbUser?.longitude ? Number(dbUser.longitude) : null;
+
     // Check if the user has an active premium/paid subscription
     const subscription = await this.prisma.subscription.findFirst({
       where: {
@@ -280,7 +288,7 @@ export class ShoutService {
     };
 
     // If no coordinates are provided, preserve chronological sorting (recent first for subbed, old first for unsubbed)
-    if (latitude == null || longitude == null) {
+    if (userLat == null || userLon == null) {
       const shouts = await this.prisma.shout.findMany({
         skip,
         take: limit,
@@ -379,9 +387,6 @@ export class ShoutService {
         },
       },
     });
-
-    const userLat = Number(latitude);
-    const userLon = Number(longitude);
 
     const withDistance = rawShouts
       .filter((s) => !this.isHiddenShout(s, hiddenUserIds))
@@ -1466,7 +1471,7 @@ export class ShoutService {
 
     const activeUsers = await this.prisma.user.findMany({
       where: {
-        id: { 
+        id: {
           not: creatorId,
           notIn: Array.from(blockedUserIds),
         },
