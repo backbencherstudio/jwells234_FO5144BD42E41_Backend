@@ -279,7 +279,6 @@ export class ShoutService {
       where: {
         receiver_id: userId,
         entity_id: { not: null },
-        deleted_at: null,
       },
       select: { entity_id: true }
     });
@@ -647,7 +646,6 @@ export class ShoutService {
         where: {
           receiver_id: userId,
           entity_id: id,
-          deleted_at: null,
         },
         select: { id: true }
       });
@@ -707,6 +705,139 @@ export class ShoutService {
     };
   }
 
+
+
+  // comment for future
+
+  //   async getPostById(id: string, userId: string) {
+  //   const hiddenUserIds = await this.getHiddenUserIds(userId);
+  //   const shout = await this.prisma.shout.findUnique({
+  //     where: { id },
+  //     include: {
+  //       user: {
+  //         select: {
+  //           id: true,
+  //           name: true,
+  //           username: true,
+  //           avatar: true,
+  //           status: true,
+  //         },
+  //       },
+  //       medias: true,
+  //       _count: {
+  //         select: {
+  //           likes: true,
+  //           comments: true,
+  //           shares: true,
+  //         },
+  //       },
+  //       likes: {
+  //         where: { user_id: userId },
+  //         select: { id: true },
+  //       },
+  //       original_shout: {
+  //         include: {
+  //           user: {
+  //             select: {
+  //               id: true,
+  //               name: true,
+  //               username: true,
+  //               avatar: true,
+  //               status: true,
+  //             },
+  //           },
+  //           medias: true,
+  //           _count: { select: { likes: true, comments: true, shares: true } },
+  //           likes: { where: { user_id: userId }, select: { id: true } },
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   if (!shout) {
+  //     return {
+  //       success: false,
+  //       statusCode: 404,
+  //       message: 'Shout not found',
+  //     };
+  //   }
+
+  //   if (this.isHiddenShout(shout, hiddenUserIds)) {
+  //     return {
+  //       success: false,
+  //       statusCode: 404,
+  //       message: 'Shout not found',
+  //     };
+  //   }
+
+  //   // Access check: creator, within 50km, or received notification
+  //   const isCreator = shout.user_id === userId;
+  //   let isWithinRange = false;
+  //   let hasNotification = false;
+
+  //   if (!isCreator) {
+  //     const dbNotification = await this.prisma.notification.findFirst({
+  //       where: {
+  //         receiver_id: userId,
+  //         entity_id: id,
+  //       },
+  //       select: { id: true }
+  //     });
+  //     hasNotification = !!dbNotification;
+
+  //     if (!hasNotification) {
+  //       if (shout.latitude != null && shout.longitude != null) {
+  //         const dbUser = await this.prisma.user.findUnique({
+  //           where: { id: userId },
+  //           select: { latitude: true, longitude: true },
+  //         });
+  //         if (dbUser?.latitude != null && dbUser?.longitude != null) {
+  //           const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  //             const toRad = (v: number) => (v * Math.PI) / 180;
+  //             const R = 6371000; // Earth radius in meters
+  //             const dLat = toRad(lat2 - lat1);
+  //             const dLon = toRad(lon2 - lon1);
+  //             const a =
+  //               Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+  //               Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+  //               Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  //             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  //             return R * c;
+  //           };
+  //           const dist = haversineDistance(
+  //             Number(dbUser.latitude),
+  //             Number(dbUser.longitude),
+  //             Number(shout.latitude),
+  //             Number(shout.longitude)
+  //           );
+  //           isWithinRange = dist <= 50000;
+  //         }
+  //       } else {
+  //         isWithinRange = true;
+  //       }
+  //     }
+  //   }
+
+  //   if (!isCreator && !hasNotification && !isWithinRange) {
+  //     return {
+  //       success: false,
+  //       statusCode: 404,
+  //       message: 'Shout not found',
+  //     };
+  //   }
+
+  //   const transformedShout = this.transformShout(shout, userId);
+
+  //   if (shout.original_shout) {
+  //     transformedShout.original_shout = this.transformShout(shout.original_shout, userId);
+  //   }
+
+  //   return {
+  //     success: true,
+  //     statusCode: 200,
+  //     data: transformedShout,
+  //   };
+  // }
 
   async updatePost(
     id: string,
@@ -1612,7 +1743,7 @@ export class ShoutService {
 
     const activeUsers = await this.prisma.user.findMany({
       where: {
-        id: { 
+        id: {
           notIn: Array.from(excludeIds),
         },
         status: 'ACTIVE',
