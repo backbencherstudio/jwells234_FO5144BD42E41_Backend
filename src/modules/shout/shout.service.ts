@@ -271,8 +271,8 @@ export class ShoutService {
       select: { latitude: true, longitude: true },
     });
 
-    const userLat = dbUser?.latitude ? Number(dbUser.latitude) : null;
-    const userLon = dbUser?.longitude ? Number(dbUser.longitude) : null;
+    const userLat = latitude != null ? Number(latitude) : (dbUser?.latitude != null ? Number(dbUser.latitude) : null);
+    const userLon = longitude != null ? Number(longitude) : (dbUser?.longitude != null ? Number(dbUser.longitude) : null);
 
     // Fetch user notifications for shouts to check if they have received notifications for them
     const userNotifications = await this.prisma.notification.findMany({
@@ -282,18 +282,7 @@ export class ShoutService {
       },
       select: { entity_id: true }
     });
-    const notifiedShoutIds = new Set(userNotifications.map((n) => n.entity_id));
-
-    // Check if the user has an active premium/paid subscription
-    const subscription = await this.prisma.subscription.findFirst({
-      where: {
-        userId: userId,
-        isActive: true,
-      },
-    });
-
-    const hasSubscription = subscription && subscription.type !== 'FREE' && (!subscription.endDate || new Date(subscription.endDate) > new Date());
-    const orderDirection = hasSubscription ? 'desc' : 'asc';
+    const notifiedShoutIds = new Set(userNotifications.map((n) => n.entity_id as string));
 
     // Helper: compute Haversine distance (meters)
     const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -309,12 +298,16 @@ export class ShoutService {
       return R * c;
     };
 
-    // If no coordinates are provided, preserve chronological sorting (recent first for subbed, old first for unsubbed)
+    // If no coordinates are provided, preserve chronological sorting (recent first)
     if (userLat == null || userLon == null) {
       const shouts = await this.prisma.shout.findMany({
+        where: {
+          deleted_at: null,
+          status: 'PUBLISHED',
+        },
         skip,
         take: limit,
-        orderBy: { created_at: orderDirection },
+        orderBy: { created_at: 'desc' },
         include: {
           user: {
             select: {
@@ -367,16 +360,31 @@ export class ShoutService {
       };
     }
 
-    // Fetch shouts that have coordinates (nearby feed)
-    // Note: for performance we limit the initial fetch to a reasonable cap and then paginate after sorting.
+    // Fetch shouts that have coordinates (nearby feed) OR where user received notification
     const FETCH_CAP = 2000;
+    const notifiedIdsArray = Array.from(notifiedShoutIds);
+    const whereCondition: any = {
+      deleted_at: null,
+      status: 'PUBLISHED',
+    };
+
+    if (notifiedIdsArray.length > 0) {
+      whereCondition.OR = [
+        {
+          latitude: { not: null },
+          longitude: { not: null },
+        },
+        {
+          id: { in: notifiedIdsArray },
+        },
+      ];
+    } else {
+      whereCondition.latitude = { not: null };
+      whereCondition.longitude = { not: null };
+    }
+
     const rawShouts = await this.prisma.shout.findMany({
-      where: {
-        latitude: { not: null },
-        longitude: { not: null },
-        deleted_at: null,
-        status: 'PUBLISHED',
-      },
+      where: whereCondition,
       take: FETCH_CAP,
       include: {
         user: {
@@ -414,17 +422,20 @@ export class ShoutService {
       .filter((s) => !this.isHiddenShout(s, hiddenUserIds))
       .map((s) => ({
         shout: s,
-        distance: haversineDistance(userLat, userLon, Number(s.latitude), Number(s.longitude)),
+        distance:
+          s.latitude != null && s.longitude != null
+            ? haversineDistance(userLat, userLon, Number(s.latitude), Number(s.longitude))
+            : Infinity,
       }))
       .filter((item) => {
         // Show if within 50km OR if user received a notification for it
         return item.distance <= 50000 || notifiedShoutIds.has(item.shout.id);
       })
       .sort((a, b) => {
-        // Sort chronologically based on subscription status (recent vs old)
+        // Sort chronologically (recent first for all users)
         const dateA = new Date(a.shout.created_at).getTime();
         const dateB = new Date(b.shout.created_at).getTime();
-        return hasSubscription ? dateB - dateA : dateA - dateB;
+        return dateB - dateA;
       });
 
     const paged = withDistance.slice(skip, skip + limit).map((item) => item.shout);
