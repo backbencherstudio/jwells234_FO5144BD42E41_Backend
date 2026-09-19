@@ -1,0 +1,1514 @@
+type: collection.insomnia.rest/5.0
+name: nest-boilerplate
+meta:
+  id: wrk_7975095beb1a45c0a4bc4fb8c88c438f
+  created: 1756029290034
+  modified: 1763262138544
+  description: ""
+collection:
+  - name: Nestjs boilerplate
+    meta:
+      id: fld_6c3457b71b544051887c0db846b9e415
+      created: 1756029348692
+      modified: 1756188500166
+      sortKey: -1756029348692
+      description: ""
+    children:
+      - name: src
+        meta:
+          id: fld_8da097c19224441fb1b9a947e686d6b5
+          created: 1756029405811
+          modified: 1756188394106
+          sortKey: -1756115391526
+          description: ""
+        children:
+          - name: modules
+            meta:
+              id: fld_7041b6dfbca2443499afa43455aea103
+              created: 1756029423990
+              modified: 1756029426925
+              sortKey: -1756029426899
+              description: ""
+            children:
+              - name: auth
+                meta:
+                  id: fld_a4823a67f70a432b8e23aad2bf683b07
+                  created: 1756029436474
+                  modified: 1756029442200
+                  sortKey: -1756029442162
+                  description: ""
+                children:
+                  - url: "{{ _.base_url }}/auth/me"
+                    name: Me
+                    meta:
+                      id: req_cceea77e8dec477fa2515d7eb3b6940d
+                      created: 1756029452428
+                      modified: 1756100230495
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756029452428
+                    method: GET
+                    headers:
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                    authentication:
+                      type: bearer
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjEwMDAzNSwiZXhwIjoxNzU2MTAzNjM1fQ.o4H4ALWs5te5-73v7B1F_oSrj9kQhp8pE1MUdYmZfOk
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+                  - url: "{{ _.baseUrl }}/auth/register"
+                    name: Register user
+                    meta:
+                      id: req_83b65f67ca784efead4554c15fcceccf
+                      created: 1756029457313
+                      modified: 1763263740606
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756029457313
+                    method: POST
+                    body:
+                      mimeType: multipart/form-data
+                      params:
+                        - id: pair_0114904f9e1f4ad88d85c23b5b754b52
+                          name: name
+                          value: Sazedul Islam
+                          description: ""
+                          disabled: false
+                        - id: pair_1191732786f84189b9f3c8d7452c8a65
+                          name: first_name
+                          value: Sazedul
+                          description: ""
+                          disabled: false
+                        - id: pair_e48e6e1063ce49829ed1c9081341cbb6
+                          name: last_name
+                          value: Islam
+                          description: ""
+                          disabled: false
+                        - id: pair_e0eb407a65744ae7a839f0035a1af1d1
+                          name: email
+                          value: sazedulislam9126@gmail.com
+                          description: ""
+                          disabled: false
+                        - id: pair_c2df075e27de44b6a8f8007a2e0d92d5
+                          name: password
+                          value: "123456789"
+                          description: ""
+                          disabled: false
+                        - id: pair_40d9595c412f40cea243d425f0a31dfb
+                          name: type
+                          value: user
+                          description: ""
+                          disabled: false
+                        - id: pair_3a88022840b74004bc0cfefc2425c05a
+                          name: avatar
+                          value: ""
+                          description: ""
+                          disabled: false
+                          type: file
+                          fileName: C:\Users\Sazedul\Downloads\CompressJPEG.Online_img(500x500).jpg
+                    headers:
+                      - name: Content-Type
+                        value: multipart/form-data
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+                  - url: "{{ _.base_url }}/auth/login"
+                    name: Login
+                    meta:
+                      id: req_ca6f27837bc64d2cace6284ad819eacc
+                      created: 1756033452030
+                      modified: 1756117890509
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756033452030
+                    method: POST
+                    body:
+                      mimeType: application/json
+                      text: |-
+                        {
+                          "email": "xamore1650@litepax.com",
+                          "password": "123456789"
+                        }
+                    headers:
+                      - name: Content-Type
+                        value: application/json
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+                  - url: "{{ _.base_url }}/auth/refresh-token"
+                    name: Refresh-token
+                    meta:
+                      id: req_f775816021414172bd8a352108a6ee2e
+                      created: 1756097325332
+                      modified: 1756099537960
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756097325332
+                    method: POST
+                    body:
+                      mimeType: application/json
+                      text: |-
+                        {
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjA5NzA5OCwiZXhwIjoxNzU2NzAxODk4fQ.FV2ycn9SvO7Vj-lx87pyu_fPkg18xhqhOI8tOB4n028"
+                        }
+                    headers:
+                      - name: Content-Type
+                        value: application/json
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                    authentication:
+                      type: bearer
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjA5NzA5OCwiZXhwIjoxNzU2MTAwNjk4fQ.opt4MOQ3rhYt3IiV7lYlO9MlXGTFfHlnAXSuAZeXWU4
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+                  - url: "{{ _.base_url }}/auth/logout"
+                    name: Logout
+                    meta:
+                      id: req_c52aabded565487791d30c8f101476c5
+                      created: 1756097534794
+                      modified: 1756099531004
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756097534794
+                    method: POST
+                    headers:
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                    authentication:
+                      type: bearer
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjA5NzA5OCwiZXhwIjoxNzU2MTAwNjk4fQ.opt4MOQ3rhYt3IiV7lYlO9MlXGTFfHlnAXSuAZeXWU4
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+                  - url: "{{ _.base_url }}/auth/google"
+                    name: Google auth
+                    meta:
+                      id: req_a77ae2be2a4d4325b82f1e6eb4bb8943
+                      created: 1756097641474
+                      modified: 1756097679205
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756097641474
+                    method: GET
+                    headers:
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+                  - url: "{{ _.base_url }}/auth/update"
+                    name: Update user
+                    meta:
+                      id: req_d9b44d17c3064a4e8c31169224769959
+                      created: 1756099509533
+                      modified: 1756101759037
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756099509533
+                    method: PATCH
+                    body:
+                      mimeType: application/json
+                      text: |-
+                        {
+                        		"name": "saju islam",
+                        		"avatar": "profile-image.png",
+                        		"address": "dhaka, bangladesh",
+                        		"phone_number": "01785XXXXXXX",
+                        		"type": "admin",
+                        		"gender": "male",
+                        		"date_of_birth": "2000-08-25T04:43:02.400Z",
+                        		"created_at": "2025-08-25T04:43:02.400Z"
+                        	}
+                    headers:
+                      - name: Content-Type
+                        value: application/json
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                    authentication:
+                      type: bearer
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjEwMDAzNSwiZXhwIjoxNzU2MTAzNjM1fQ.o4H4ALWs5te5-73v7B1F_oSrj9kQhp8pE1MUdYmZfOk
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+                  - name: Change Password
+                    meta:
+                      id: fld_dfd027b2bd0547eba00d4bfb883d37f5
+                      created: 1756111505025
+                      modified: 1756111555578
+                      sortKey: -1756111505025
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/auth/forgot-password"
+                        name: Forgot password
+                        meta:
+                          id: req_cceb6725848e4fb6b09458e8167688b1
+                          created: 1756102521185
+                          modified: 1756111519725
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756111511047.5
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"email": "sazedulislam9126@gmail.com"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/verify-email"
+                        name: Verify OTP
+                        meta:
+                          id: req_38d662d312674f398bc4a4030047f253
+                          created: 1756102905933
+                          modified: 1756111517633
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756111511035
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"email": "sazedulislam9126@gmail.com",
+                            	"otp": "181565"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/reset-password"
+                        name: Reset Password
+                        meta:
+                          id: req_1632b5c570c245258c7b5f456686b31f
+                          created: 1756104465015
+                          modified: 1756111515596
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756111511060
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"email": "sazedulislam9126@gmail.com",
+                            	"otp": "181565",
+                            	"new_password": "1234567890"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/resend-verification-email"
+                        name: Resend verification
+                        meta:
+                          id: req_86af9cc54d024770984288dc9628c775
+                          created: 1756110963952
+                          modified: 1756111513521
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756111511110
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"email": "sazedulislam9126@gmail.com"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/change-password"
+                        name: Change password
+                        meta:
+                          id: req_2def148506084ca7b1292c2a31f2edae
+                          created: 1756111135164
+                          modified: 1756111511053
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756111511010
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"email": "sazedulislam9126@gmail.com",
+                            	"old_password": "1122",
+                            	"new_password": "123456789"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjExMDU4NiwiZXhwIjoxNzU2MTE0MTg2fQ.Z31OjBgBAsKsdDUVJ5Vn68ti01BFeWqILf3L5e603Ps
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                  - name: Change Email
+                    meta:
+                      id: fld_2e67b8d880d54d82bfd1a61fd03aed0b
+                      created: 1756111541733
+                      modified: 1756111564818
+                      sortKey: -1756111541733
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/auth/request-email-change"
+                        name: Request change email
+                        meta:
+                          id: req_9eb47830177e48e2941022cb62e886d6
+                          created: 1756111569536
+                          modified: 1756117837170
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756111569536
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"email": "xamore1650@litepax.com"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjExMDU4NiwiZXhwIjoxNzU2MTE0MTg2fQ.Z31OjBgBAsKsdDUVJ5Vn68ti01BFeWqILf3L5e603Ps
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/change-email"
+                        name: Change email
+                        meta:
+                          id: req_376aa3c9b9f24c74b103e8ffb8fc4946
+                          created: 1756112016270
+                          modified: 1756112191411
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756112016270
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"email": "xamore1650@litepax.com",
+                            	"token": "336482"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjExMDU4NiwiZXhwIjoxNzU2MTE0MTg2fQ.Z31OjBgBAsKsdDUVJ5Vn68ti01BFeWqILf3L5e603Ps
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                  - name: 2FA
+                    meta:
+                      id: fld_b298ee781aa844b888831965e3d85968
+                      created: 1756112257623
+                      modified: 1756112257623
+                      sortKey: -1756112257623
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/auth/generate-2fa-secret"
+                        name: Generate 2fa secret
+                        meta:
+                          id: req_5301624a002546f1bda1fbf09e7021d7
+                          created: 1756112305646
+                          modified: 1756112380116
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756112305646
+                        method: POST
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjExMDU4NiwiZXhwIjoxNzU2MTE0MTg2fQ.Z31OjBgBAsKsdDUVJ5Vn68ti01BFeWqILf3L5e603Ps
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/verify-2fa"
+                        name: Verify-2fa
+                        meta:
+                          id: req_f3aaa530b3b54dc097dbc924da0d4983
+                          created: 1756112453215
+                          modified: 1756112703378
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756112453215
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"token":"336482"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjExMDU4NiwiZXhwIjoxNzU2MTE0MTg2fQ.Z31OjBgBAsKsdDUVJ5Vn68ti01BFeWqILf3L5e603Ps
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/enable-2fa"
+                        name: Enable-2fa
+                        meta:
+                          id: req_4a9b151892dc4513a6caa9b1afc6fc33
+                          created: 1756112877385
+                          modified: 1756112884920
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756112379430.5
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"token":"336482"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjExMDU4NiwiZXhwIjoxNzU2MTE0MTg2fQ.Z31OjBgBAsKsdDUVJ5Vn68ti01BFeWqILf3L5e603Ps
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/auth/disable-2fa"
+                        name: Disable-2fa
+                        meta:
+                          id: req_b1a729c8241c4bb18afa82ca9e7f1004
+                          created: 1756112911267
+                          modified: 1756112935666
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756112342538.25
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: ""
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjExMDU4NiwiZXhwIjoxNzU2MTE0MTg2fQ.Z31OjBgBAsKsdDUVJ5Vn68ti01BFeWqILf3L5e603Ps
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+              - name: Applications
+                meta:
+                  id: fld_86e1a96e69eb44f1a5155afe631aea87
+                  created: 1756113964507
+                  modified: 1756113992900
+                  sortKey: -1756113964507
+                  description: ""
+                children:
+                  - name: Contact
+                    meta:
+                      id: fld_21638da19bb8440b8dceef736ff034f1
+                      created: 1756114002840
+                      modified: 1756114002840
+                      sortKey: -1756114002840
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/contact"
+                        name: Create contact
+                        meta:
+                          id: req_8c7ec8d0e15247159726c31f77f618ec
+                          created: 1756113952208
+                          modified: 1756114426495
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756114012480
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"first_name": "sazu",
+                            	"last_name": "islam", 
+                            	"email": "sazuislam@gmail.com",
+                            	"message": "thi is the test message."
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                  - name: FAQ
+                    meta:
+                      id: fld_d215a149e033431ab875eca2447dd43b
+                      created: 1756114760879
+                      modified: 1756114760879
+                      sortKey: -1756114760879
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/faq"
+                        name: Get all faq
+                        meta:
+                          id: req_751304e7d4784d1dbf7d83dd24d06d1a
+                          created: 1756114771012
+                          modified: 1756114812929
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756114771012
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/faq/id"
+                        name: Get faq by ID
+                        meta:
+                          id: req_14d2aa6feb7a436b9dbba79e778ea9dd
+                          created: 1756114869422
+                          modified: 1756114904608
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756114391746
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+              - name: Admin
+                meta:
+                  id: fld_7551a2f995854885a87021cd55898ec4
+                  created: 1756115372727
+                  modified: 1756115372727
+                  sortKey: -1756115372727
+                  description: ""
+                children:
+                  - name: Contacts
+                    meta:
+                      id: fld_23e04a3c67c548e29b191c5d11f4cda4
+                      created: 1756116843099
+                      modified: 1756116859107
+                      sortKey: -1756116843299
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/admin/contact"
+                        name: "Create contact "
+                        meta:
+                          id: req_37cae13825e94123ab6237d1cd29d057
+                          created: 1756116624507
+                          modified: 1756176196224
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756116863655
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"first_name": "Sazedul",
+                            	"last_name": "Islam",
+                            	"email": "sazedul.bdcalling@gmail.com",
+                            	"phone_number": "01708747649",
+                            	"message": "This is for the testing from Admin"	
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjEwMDAzNSwiZXhwIjoxNzU2MTAzNjM1fQ.o4H4ALWs5te5-73v7B1F_oSrj9kQhp8pE1MUdYmZfOk
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/contact"
+                        name: Get all contact
+                        meta:
+                          id: req_bde1639603ac4c389355ea8622cf065e
+                          created: 1756117706545
+                          modified: 1756176600114
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756117706545
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/contact/cmeqx7b2i0000vexosh5d1pti"
+                        name: :id
+                        meta:
+                          id: req_b3469c490d30495f90f9b0a6633fa71d
+                          created: 1756177199502
+                          modified: 1756177237515
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756177199502
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/contact/cmeqx7b2i0000vexosh5d1pti"
+                        name: Update by id
+                        meta:
+                          id: req_55245e7b1df542d682f0f7d34f8880c7
+                          created: 1756177276968
+                          modified: 1756177415361
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756147453023.5
+                        method: PATCH
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            	"first_name": "test",
+                            	"last_name": "user",
+                            	"message": "Change the message from admin"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/contact/cmeqx7b2i0000vexosh5d1pti"
+                        name: Delete by id
+                        meta:
+                          id: req_2d33388dc0804f50b74f011f908f3c4e
+                          created: 1756177516730
+                          modified: 1756177525219
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756162326262.75
+                        method: DELETE
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                  - name: FAQ
+                    meta:
+                      id: fld_c08a8eb6726a448ebd5954129e75a71d
+                      created: 1756177594361
+                      modified: 1756177594361
+                      sortKey: -1756116117412.5
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/admin/faq"
+                        name: Create FAQ
+                        meta:
+                          id: req_49cae39b265944ff9eafa78e1f24da11
+                          created: 1756177594362
+                          modified: 1756177886229
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756116863655
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            "question": "May I get the after buying services",
+                            "answer": "NO",
+                            "sort_order": 1
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjEwMDAzNSwiZXhwIjoxNzU2MTAzNjM1fQ.o4H4ALWs5te5-73v7B1F_oSrj9kQhp8pE1MUdYmZfOk
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/faq"
+                        name: Get all FAQ
+                        meta:
+                          id: req_9f9d48747e8248c28ce441a85a601d46
+                          created: 1756177594362
+                          modified: 1756177922907
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756117706545
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/faq/cmeryz1hk0002ve78h33vbynn"
+                        name: :id
+                        meta:
+                          id: req_dab59ea2987841d782b4dfb3e1151ccc
+                          created: 1756177594363
+                          modified: 1756177989308
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756177199502
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/faq/cmeryz1hk0002ve78h33vbynn"
+                        name: Update by id
+                        meta:
+                          id: req_67a90b2d9311415583048090e45dcc36
+                          created: 1756177594364
+                          modified: 1756178253778
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756147453023.5
+                        method: PATCH
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                            "question": "May I get the after",
+                            "answer": "yes",
+                            "sort_order": 0
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/faq/cmeryz1hk0002ve78h33vbynn"
+                        name: Delete by id
+                        meta:
+                          id: req_b6c35d798aea4d40b8e2015c5389421a
+                          created: 1756177594364
+                          modified: 1756178327219
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756162326262.75
+                        method: DELETE
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/faq/batch-create"
+                        name: Batch create FAQ
+                        meta:
+                          id: req_8b7dc7196ae9448282bd32b0f5017438
+                          created: 1756178487332
+                          modified: 1756178959915
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756178487332
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: >-
+                            {
+                              "faqs": [
+                                {
+                                  "question": "What is your return policy?",
+                                  "answer": "You can return any item within 30 days of purchase.",
+                                  "category": "General"
+                                },
+                                {
+                                  "question": "How do I contact support?",
+                                  "answer": "Email us at support@example.com or call 123-456-7890.",
+                                  "category": "Support"
+                                }
+                              ]
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                  - name: Notification
+                    meta:
+                      id: fld_069772c99f1944a5a159388708004ac0
+                      created: 1756179068880
+                      modified: 1756179068880
+                      sortKey: -1756115754469.25
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/admin/notification"
+                        name: Get all notification
+                        meta:
+                          id: req_1cf02a967855476d9eb2c28118cb5f87
+                          created: 1756179068882
+                          modified: 1756179093101
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756117706545
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/notification/cmeryz1hk0002ve78h33vbynn"
+                        name: Delete by id
+                        meta:
+                          id: req_a056ee6d37aa4720ac8c52b84d9e7f69
+                          created: 1756179068883
+                          modified: 1756179193087
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756162326262.75
+                        method: DELETE
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/notification"
+                        name: Delete All
+                        meta:
+                          id: req_31a5b5c727c14124a715ed1fa4ea5ba0
+                          created: 1756179171353
+                          modified: 1756179185715
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756154889643.125
+                        method: DELETE
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                  - name: Users
+                    meta:
+                      id: fld_a7912a966bc84381ba69abaddcd8c431
+                      created: 1756179284466
+                      modified: 1756179284466
+                      sortKey: -1756116480355.75
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/admin/user"
+                        name: Create user
+                        meta:
+                          id: req_3e49f76db75d4f88bf67e0eb322570de
+                          created: 1756179284467
+                          modified: 1756179465217
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756116863655
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                              "name": "Tanvir Ahmed",
+                              "email": "tanvir.ahmed@example.com",
+                              "password": "tanvirPass789",
+                              "avatar": "tanvir-profile.png",
+                              "address": "Sylhet, Bangladesh",
+                              "phone_number": "01923XXXXXXX",
+                              "type": "admin",
+                              "gender": "male",
+                              "date_of_birth": "1988-12-01T00:00:00.000Z"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNhemVkdWxpc2xhbTkxMjZAZ21haWwuY29tIiwic3ViIjoiY21lcW1zdnBjMDAwMHZlaW9rNmRmZGRtcCIsImlhdCI6MTc1NjEwMDAzNSwiZXhwIjoxNzU2MTAzNjM1fQ.o4H4ALWs5te5-73v7B1F_oSrj9kQhp8pE1MUdYmZfOk
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/user"
+                        name: Get all users
+                        meta:
+                          id: req_3f4c57ef102c426bbc9302acfca6c9ac
+                          created: 1756179284467
+                          modified: 1756179489747
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756117706545
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/user/cmerzwe4n0006ve784zxv7sp4"
+                        name: :id
+                        meta:
+                          id: req_7871e8355082464b9db2c43b4e5ea38c
+                          created: 1756179284468
+                          modified: 1756180322884
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756177199502
+                        method: GET
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/user/cmerzvmkv0005ve78zui9lya0"
+                        name: Delete by id
+                        meta:
+                          id: req_992976e85fc94db1953a29327882b746
+                          created: 1756179284469
+                          modified: 1756180364427
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756162326262.75
+                        method: DELETE
+                        headers:
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/user/cmerzwhxz0007ve78nzrzt0ds/approve"
+                        name: Approved user
+                        meta:
+                          id: req_c2b525ceac21492db8b34d72ed43c76f
+                          created: 1756179284469
+                          modified: 1756179954259
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756147453023.5
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: ""
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/user/cmerzwe4n0006ve784zxv7sp4/reject"
+                        name: Rejected user
+                        meta:
+                          id: req_046505799a31457bb5812208c1b46931
+                          created: 1756179995720
+                          modified: 1756180007674
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756132579784.25
+                        method: POST
+                        body:
+                          mimeType: application/json
+                          text: ""
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/user/cmerzwe4n0006ve784zxv7sp4"
+                        name: updated by id
+                        meta:
+                          id: req_2c208ef8eff0449a8f826e8ac81ca8dc
+                          created: 1756180195231
+                          modified: 1756180269813
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756169762882.375
+                        method: PATCH
+                        body:
+                          mimeType: application/json
+                          text: |-
+                            {
+                              "name": "Ayesha Rahman",
+                              "avatar": "ayesha-profile-updated.png",
+                              "address": "Dhaka, Bangladesh",
+                              "phone_number": "01812XXXXXXX",
+                              "type": "admin",
+                              "gender": "female",
+                              "date_of_birth": "1995-05-15T00:00:00.000Z"
+                            }
+                        headers:
+                          - name: Content-Type
+                            value: application/json
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                  - name: Website info
+                    meta:
+                      id: fld_030c3e9309aa45ea804ead98d64e2b39
+                      created: 1756180474452
+                      modified: 1756180474452
+                      sortKey: -1756180474452
+                      description: ""
+                    children:
+                      - url: "{{ _.base_url }}/admin/website-info"
+                        name: Update website info
+                        meta:
+                          id: req_2a35d06ae9b1405797ab952137a052e2
+                          created: 1756180480650
+                          modified: 1756181338332
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756180480650
+                        method: POST
+                        body:
+                          mimeType: multipart/form-data
+                          params:
+                            - name: logo
+                              value: ""
+                              description: ""
+                              disabled: false
+                              id: pair_2f6419b58e9642658f67f0c715305cb2
+                              fileName: C:\Users\Sazedul\Downloads\logo.jpg
+                              type: file
+                            - name: favicon
+                              value: ""
+                              description: ""
+                              disabled: false
+                              id: pair_b0f063bcdfd245e39d8d883a65643d40
+                              fileName: C:\Users\Sazedul\Downloads\favicon.png
+                              type: file
+                        headers:
+                          - name: Content-Type
+                            value: multipart/form-data
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+                      - url: "{{ _.base_url }}/admin/website-info"
+                        name: Get website info
+                        meta:
+                          id: req_fe5d380f1aec4d3eb55e4b8ac3107b6b
+                          created: 1756181226469
+                          modified: 1756181258097
+                          isPrivate: false
+                          description: ""
+                          sortKey: -1756179483991
+                        method: GET
+                        body:
+                          mimeType: multipart/form-data
+                        headers:
+                          - name: Content-Type
+                            value: multipart/form-data
+                          - name: User-Agent
+                            value: insomnia/11.4.0
+                        authentication:
+                          type: bearer
+                          token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                        settings:
+                          renderRequestBody: true
+                          encodeUrl: true
+                          followRedirects: global
+                          cookies:
+                            send: true
+                            store: true
+                          rebuildPath: true
+              - name: Payment
+                meta:
+                  id: fld_292d026ac07c4227a1fd7753ee355573
+                  created: 1756182220777
+                  modified: 1756182220777
+                  sortKey: -1756182220777
+                  description: ""
+                children:
+                  - url: "{{ _.base_url }}/payment/stripe/webhook"
+                    name: Webhook
+                    meta:
+                      id: req_7ab547ddaff74ba59beb5b9814c72f27
+                      created: 1756182225773
+                      modified: 1756182745037
+                      isPrivate: false
+                      description: ""
+                      sortKey: -1756182225773
+                    method: POST
+                    body:
+                      mimeType: application/json
+                      text: |-
+                        {
+                          "amount": 1000,
+                          "currency": "usd",
+                          "source": "tok_visa",
+                          "description": "Test payment"
+                        }
+                    headers:
+                      - name: Content-Type
+                        value: application/json
+                      - name: User-Agent
+                        value: insomnia/11.4.0
+                      - name: Stripe-Signature
+                        value: ""
+                    authentication:
+                      type: bearer
+                      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InhhbW9yZTE2NTBAbGl0ZXBheC5jb20iLCJzdWIiOiJjbWVxbXN2cGMwMDAwdmVpb2s2ZGZkZG1wIiwiaWF0IjoxNzU2MTc2NTQ4LCJleHAiOjE3NTYxODAxNDh9.CdwuTzeIgVth6q293lF9X3QwB51UHVbt31AE51F1yC8
+                    settings:
+                      renderRequestBody: true
+                      encodeUrl: true
+                      followRedirects: global
+                      cookies:
+                        send: true
+                        store: true
+                      rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_4b96b8318cc4cb01b760a0c417dfbdac362eb59a
+    created: 1763262138563
+    modified: 1763262138563
+environments:
+  name: Base Environment
+  meta:
+    id: env_4b96b8318cc4cb01b760a0c417dfbdac362eb59a
+    created: 1756029290037
+    modified: 1763263289777
+    isPrivate: false
+  data:
+    baseUrl: http://localhost:4006/api

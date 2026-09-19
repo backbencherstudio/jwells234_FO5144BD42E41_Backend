@@ -1,0 +1,47 @@
+// support request email template
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support Request</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      h2 {
+        color: #333333;
+      }
+      p {
+        color: #555555;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #999999;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>New Support Request</h2>
+      <p><strong>Name:</strong> <%= name %></p>
+      <p><strong>Email:</strong> <%= email %></p>
+      <p><strong>Subject:</strong> <%= subject %></p>
+      <p><strong>Message:</strong></p>
+      <p><%= message %></p>
+      <div class="footer">
+        <p>This email was sent from the support request form on our website.</p>
+      </div>
+    </div>
+  </body>
+</html>
