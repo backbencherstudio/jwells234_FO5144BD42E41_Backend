@@ -126,22 +126,26 @@ export class AuthService {
         };
       }
 
-      // create paystack customer account
-      const paystackCustomer = await PaystackPayment.createCustomer({
-        email: email,
-        first_name: name.split(' ')[0] || name,
-        last_name: name.split(' ')[1] || '',
-      });
-
-      if (paystackCustomer) {
-        await this.prisma.user.update({
-          where: {
-            id: user.data.id,
-          },
-          data: {
-            billing_id: paystackCustomer.customer_code,
-          },
+      // create paystack customer account (optional — skip if key not configured)
+      if (appConfig().payment?.paystack?.secret_key) {
+        const paystackCustomer = await PaystackPayment.createCustomer({
+          email: email,
+          first_name: name.split(' ')[0] || name,
+          last_name: name.split(' ')[1] || '',
         });
+
+        if (paystackCustomer) {
+          await this.prisma.user.update({
+            where: {
+              id: user.data.id,
+            },
+            data: {
+              billing_id: paystackCustomer.customer_code,
+            },
+          });
+        }
+      } else {
+        console.warn('Paystack secret key missing — skipping customer create');
       }
 
       // ----------------------------------------------------
@@ -244,18 +248,39 @@ export class AuthService {
           isActive: true,
           type: true,
           endDate: true,
+          plan: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              type: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc',
+          updatedAt: 'desc',
         },
       });
 
       let isPremium = false;
-      if (subscription && subscription.isActive) {
-        if (subscription.type !== 'FREE') {
-          if (!subscription.endDate || new Date(subscription.endDate) > new Date()) {
-            isPremium = true;
-          }
+      if (subscription && subscription.isActive && subscription.type !== 'FREE') {
+        // Trust isActive as source of truth. Sandbox Apple renewals are short-lived;
+        // if endDate lapsed but RC still has entitlement, client sync / RENEWAL webhook
+        // will refresh endDate. Do not flip premium off solely on endDate while isActive.
+        isPremium = true;
+
+        // Soft-expire only when clearly past AND no recent renewal path left it active
+        // with a stale endDate for > 2 days (production safety).
+        if (
+          subscription.endDate &&
+          Date.now() - new Date(subscription.endDate).getTime() >
+            2 * 24 * 60 * 60 * 1000
+        ) {
+          isPremium = false;
+          await this.prisma.subscription.update({
+            where: { id: subscription.id },
+            data: { isActive: false, status: 'expired', remainingDays: 0 },
+          });
         }
       }
 
@@ -276,16 +301,28 @@ export class AuthService {
         statusCode: 200,
         data: {
           ...user,
-          subscription: revenueCatTx ? {
-            id: revenueCatTx.id,
-            transactionId: revenueCatTx.reference_number,
-            amount: revenueCatTx.amount,
-            currency: revenueCatTx.currency,
-            store: revenueCatTx.store_id,
-            type: revenueCatTx.type,
-            status: revenueCatTx.status,
-            date: revenueCatTx.created_at,
-          } : null,
+          subscription: revenueCatTx
+            ? {
+                id: revenueCatTx.id,
+                transactionId: revenueCatTx.reference_number,
+                amount: revenueCatTx.amount,
+                currency: revenueCatTx.currency,
+                store: revenueCatTx.store_id,
+                type: revenueCatTx.type,
+                status: revenueCatTx.status,
+                date: revenueCatTx.created_at,
+              }
+            : null,
+          activePlan: subscription?.plan
+            ? {
+                id: subscription.plan.id,
+                slug: subscription.plan.slug,
+                name: subscription.plan.name,
+                type: subscription.plan.type,
+                isActive: subscription.isActive,
+                endDate: subscription.endDate,
+              }
+            : null,
           premium: isPremium,
         },
       };

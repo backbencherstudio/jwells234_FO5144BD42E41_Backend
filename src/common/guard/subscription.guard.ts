@@ -31,8 +31,12 @@ export class SubscriptionGuard implements CanActivate {
       );
     }
 
-    // Check if expired
-    if (subscription.endDate && new Date() > subscription.endDate) {
+    // Match /auth/me: trust isActive. Only hard-block after 2 days past endDate.
+    if (
+      subscription.endDate &&
+      Date.now() - new Date(subscription.endDate).getTime() >
+        2 * 24 * 60 * 60 * 1000
+    ) {
       throw new ForbiddenException('Subscription expired');
     }
 

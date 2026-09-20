@@ -152,7 +152,13 @@ export class ShoutService {
       };
     }
 
-    if (subscription.endDate && new Date() > subscription.endDate) {
+    // Trust isActive (matches /auth/me). Sandbox endDates expire in minutes;
+    // only hard-block after 2 days past endDate.
+    if (
+      subscription.endDate &&
+      Date.now() - new Date(subscription.endDate).getTime() >
+        2 * 24 * 60 * 60 * 1000
+    ) {
       return {
         success: false,
         statusCode: 403,
@@ -1522,7 +1528,11 @@ export class ShoutService {
       };
     }
 
-    if (subscription.endDate && new Date() > subscription.endDate) {
+    if (
+      subscription.endDate &&
+      Date.now() - new Date(subscription.endDate).getTime() >
+        2 * 24 * 60 * 60 * 1000
+    ) {
       return {
         success: false,
         statusCode: 403,
