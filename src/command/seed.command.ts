@@ -320,11 +320,13 @@ export class SeedCommand extends CommandRunner {
 
   /**
    * RevenueCat / store product IDs must exist as SubsPlan.slug rows.
-   * Webhook plan lookup matches product_id + entitlement aliases against slug.
+   * Uses upsert by slug with empty `update` so re-running seed never
+   * deletes or overwrites existing plan rows (ids + prices stay intact).
    */
   async subsPlanSeed() {
     const plans = [
       {
+        id: 'cmu88l2350000vlgliuzt19e5',
         slug: 'free',
         name: 'Free',
         description: 'Default free plan',
@@ -337,9 +339,10 @@ export class SeedCommand extends CommandRunner {
         trialDays: 0,
       },
       {
+        id: 'cmu88l24n0001vlglwzyaa6ny',
         slug: 'john.example.jwells.one_month',
         name: 'One Month',
-        description: '1 month premium subscription',
+        description: '1 month premium',
         isFree: false,
         price: 1.99,
         currency: 'USD',
@@ -349,9 +352,10 @@ export class SeedCommand extends CommandRunner {
         trialDays: null,
       },
       {
+        id: 'cmu88l24r0002vlglouw2zcsw',
         slug: 'john.example.jwells.three_months',
         name: 'Three Months',
-        description: '3 month premium subscription',
+        description: '3 month premium',
         isFree: false,
         price: 4.99,
         currency: 'USD',
@@ -361,9 +365,10 @@ export class SeedCommand extends CommandRunner {
         trialDays: null,
       },
       {
+        id: 'cmu88l24s0003vlglvpufmhd7',
         slug: 'john.example.jwells.six_months',
         name: 'Six Months',
-        description: '6 month premium subscription',
+        description: '6 month premium',
         isFree: false,
         price: 8.99,
         currency: 'USD',
@@ -373,9 +378,10 @@ export class SeedCommand extends CommandRunner {
         trialDays: null,
       },
       {
+        id: 'cmu88l24t0004vlglr0r7mcih',
         slug: 'john.example.jwells.one_year',
         name: 'One Year',
-        description: '1 year premium subscription',
+        description: '1 year premium',
         isFree: false,
         price: 14.99,
         currency: 'USD',
@@ -389,18 +395,10 @@ export class SeedCommand extends CommandRunner {
     for (const plan of plans) {
       await this.prisma.subsPlan.upsert({
         where: { slug: plan.slug },
-        update: {
-          name: plan.name,
-          description: plan.description,
-          isFree: plan.isFree,
-          price: plan.price,
-          currency: plan.currency,
-          interval: plan.interval,
-          intervalCount: plan.intervalCount,
-          type: plan.type,
-          trialDays: plan.trialDays,
-        },
+        // Do not overwrite existing rows on re-seed.
+        update: {},
         create: {
+          id: plan.id,
           slug: plan.slug,
           name: plan.name,
           description: plan.description,
@@ -415,7 +413,9 @@ export class SeedCommand extends CommandRunner {
       });
     }
 
-    console.log(`SubsPlan seed: upserted ${plans.length} plans`);
+    console.log(
+      `SubsPlan seed: ensured ${plans.length} plans (existing rows left unchanged)`,
+    );
   }
 
   async roleSeed() {

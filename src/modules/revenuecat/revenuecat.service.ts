@@ -93,6 +93,10 @@ export class RevenueCatService {
       throw new BadRequestException('No SubsPlan available in DB');
     }
 
+    console.log('plains --->', await this.prisma.subsPlan.findMany())
+    console.log('subscriptions --->', await this.prisma.subscription.findMany())
+
+
     const purchasedAt = event.purchased_at_ms
       ? new Date(event.purchased_at_ms)
       : new Date();
@@ -438,6 +442,10 @@ export class RevenueCatService {
     this.logger.log(
       `Activated subscription ${subscription.id} for user ${userId} (plan=${plan.id}, event=${event.type})`,
     );
+
+    console.log('plains --->', await this.prisma.subsPlan.findMany())
+    console.log('subscriptions --->', await this.prisma.subscription.findMany())
+
 
     if (recordPayment) {
       try {
