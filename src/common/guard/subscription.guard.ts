@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import appConfig from '../../config/app.config';
 
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
@@ -16,6 +17,10 @@ export class SubscriptionGuard implements CanActivate {
 
     if (!user || !user.userId) {
       return false;
+    }
+
+    if (!appConfig().app.subscriptionRequired) {
+      return true;
     }
 
     const subscription = await this.prisma.subscription.findFirst({

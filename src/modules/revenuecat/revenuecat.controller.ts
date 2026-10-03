@@ -29,6 +29,11 @@ export class RevenueCatController {
     @Headers('authorization') authHeader: string,
     @Body() body: any,
   ) {
+    // Acknowledge so RevenueCat stops retrying; nothing is processed.
+    if (!appConfig().app.subscriptionRequired) {
+      return { received: true, ignored: true };
+    }
+
     const configSecret = appConfig().revenuecat.webhook_secret;
 
     if (!configSecret) {
@@ -73,6 +78,14 @@ export class RevenueCatController {
     @GetUser() user: { userId: string },
     @Body() body: SyncSubscriptionDto,
   ) {
+    if (!appConfig().app.subscriptionRequired) {
+      return {
+        success: true,
+        statusCode: 200,
+        message: 'Subscriptions are disabled; all features are free.',
+        data: { premium: true },
+      };
+    }
     return this.revenueCatService.syncFromClient(user.userId, body);
   }
 }

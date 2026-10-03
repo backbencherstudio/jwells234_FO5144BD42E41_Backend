@@ -262,6 +262,7 @@ export class AuthService {
         },
       });
 
+      const subscriptionRequired = appConfig().app.subscriptionRequired;
       let isPremium = false;
       if (subscription && subscription.isActive && subscription.type !== 'FREE') {
         // Trust isActive as source of truth. Sandbox Apple renewals are short-lived;
@@ -323,7 +324,8 @@ export class AuthService {
                 endDate: subscription.endDate,
               }
             : null,
-          premium: isPremium,
+          premium: subscriptionRequired ? isPremium : true,
+          subscriptionRequired,
         },
       };
     } catch (error) {

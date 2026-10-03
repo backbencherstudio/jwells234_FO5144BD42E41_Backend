@@ -6,6 +6,8 @@ export default () => ({
     client_app_url: process.env.CLIENT_APP_URL,
     port: parseInt(process.env.PORT, 10) || 3000,
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+    // When false (default), premium features are free for every user.
+    subscriptionRequired: process.env.SUBSCRIPTION_REQUIRED === 'true',
   },
 
   fileSystems: {

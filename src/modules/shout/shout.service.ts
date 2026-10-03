@@ -9,6 +9,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { NotificationService } from '../application/notification/notification.service';
 import { UserStatus } from '@prisma/client';
 import { LocationService } from '../../common/lib/LocationService';
+import appConfig from '../../config/app.config';
 
 @Injectable()
 export class ShoutService {
@@ -16,6 +17,31 @@ export class ShoutService {
     private prisma: PrismaService,
     private notificationService: NotificationService,
   ) { }
+
+  /** Returns an error response when a subscription is required but missing/expired. */
+  private async checkSubscription(userId: string, missingMessage: string) {
+    if (!appConfig().app.subscriptionRequired) return null;
+
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { userId, isActive: true },
+    });
+
+    if (!subscription) {
+      return { success: false, statusCode: 403, message: missingMessage };
+    }
+
+    // Trust isActive (matches /auth/me). Sandbox endDates expire in minutes;
+    // only hard-block after 2 days past endDate.
+    if (
+      subscription.endDate &&
+      Date.now() - new Date(subscription.endDate).getTime() >
+        2 * 24 * 60 * 60 * 1000
+    ) {
+      return { success: false, statusCode: 403, message: 'Subscription expired.' };
+    }
+
+    return null;
+  }
 
   private transformShout(shout: any, userId: string) {
     const isLiked = shout.likes && shout.likes.length > 0;
@@ -137,34 +163,11 @@ export class ShoutService {
       };
     }
 
-    const subscription = await this.prisma.subscription.findFirst({
-      where: {
-        userId: userId,
-        isActive: true,
-      },
-    });
-
-    if (!subscription) {
-      return {
-        success: false,
-        statusCode: 403,
-        message: 'Active subscription required to post.',
-      };
-    }
-
-    // Trust isActive (matches /auth/me). Sandbox endDates expire in minutes;
-    // only hard-block after 2 days past endDate.
-    if (
-      subscription.endDate &&
-      Date.now() - new Date(subscription.endDate).getTime() >
-        2 * 24 * 60 * 60 * 1000
-    ) {
-      return {
-        success: false,
-        statusCode: 403,
-        message: 'Subscription expired.',
-      };
-    }
+    const subscriptionError = await this.checkSubscription(
+      userId,
+      'Active subscription required to post.',
+    );
+    if (subscriptionError) return subscriptionError;
 
     const shout = await this.prisma.shout.create({
       data: {
@@ -1513,32 +1516,11 @@ export class ShoutService {
       }
     }
 
-    const subscription = await this.prisma.subscription.findFirst({
-      where: {
-        userId: userId,
-        isActive: true,
-      },
-    });
-
-    if (!subscription) {
-      return {
-        success: false,
-        statusCode: 403,
-        message: 'Active subscription required to share shout.',
-      };
-    }
-
-    if (
-      subscription.endDate &&
-      Date.now() - new Date(subscription.endDate).getTime() >
-        2 * 24 * 60 * 60 * 1000
-    ) {
-      return {
-        success: false,
-        statusCode: 403,
-        message: 'Subscription expired.',
-      };
-    }
+    const subscriptionError = await this.checkSubscription(
+      userId,
+      'Active subscription required to share shout.',
+    );
+    if (subscriptionError) return subscriptionError;
 
     // 1️⃣ Fetch the original shout
     const originalShout = await this.prisma.shout.findUnique({
